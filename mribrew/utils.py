@@ -37,6 +37,7 @@ class Tee:
         self.log_file.flush()
 
 def should_use_subset_data():
+    ### TO REMOVE!
     """Ask the user whether to use the subset data or not."""
     while True:
         user_input = input("Would you like to use the subset data for all "

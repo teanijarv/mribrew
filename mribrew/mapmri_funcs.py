@@ -27,6 +27,7 @@ def correct_neg_data(data):
     This function modifies the input data in-place if the data has any 
     negative values.
     """
+    import numpy as np
 
     # Mask of voxels with negative for each time point
     neg_mask = data<0
@@ -34,10 +35,8 @@ def correct_neg_data(data):
     # Count and print how many negative voxels there are
     num_neg_voxels = np.sum(neg_mask)
     if num_neg_voxels > 0:
-        print(f"Found {num_neg_voxels} negative voxels in the data - replacing with "
+        print(f"[Info] Found {num_neg_voxels} negative voxels in the data - replacing with "
                "average volume value for that timepoint.")
-    else:
-        print("No negative voxels found in the data - all good!")
 
     # Loop through timepoints
     for t in range(data.shape[3]):
