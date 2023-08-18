@@ -71,6 +71,7 @@ Make sure you have all the necessary dependencies installed and the data is orga
 
 - numpy
 - dipy
+- nipype
 
 ## Contribution
 
