@@ -1,32 +1,4 @@
-import os
-import numpy as np
-from dipy.io.image import load_nifti, save_nifti
-from dipy.reconst.mapmri import MapmriModel
-
-from mribrew.utils import colours
-
 def correct_neg_data(data):
-    """
-    Correct the dMRI data by replacing negative voxel values with the total 
-    volume average per timepoint.
-
-    Parameters:
-    -----------
-    data : ndarray (4D)
-        dMRI dataset containing volumes (first three dimensions) over time 
-        (fourth dimension). Expected shape is (X, Y, Z, t).
-
-    Returns:
-    --------
-    ndarray (4D)
-        Corrected dMRI data with negative values replaced by the average 
-        volume value for the respective timepoint.
-
-    Notes:
-    ------
-    This function modifies the input data in-place if the data has any 
-    negative values.
-    """
     import numpy as np
 
     # Mask of voxels with negative for each time point
@@ -51,61 +23,12 @@ def correct_neg_data(data):
 
     return data
 
-def mapmri_fit_and_save(data, affine, gtab, mapmri_params=None, bval_threshold=None,
-                        metrics_to_save=None, cur_subj='unnamed', res_mapmri_subj_dir=None):
-    """
-    Fit the MAPMRI model to diffusion MRI data and save the desired metrics.
+def fit_mapmri_model(data, gtab, mapmri_params=None):
+    import numpy as np
+    from dipy.reconst.mapmri import MapmriModel
 
-    Parameters:
-    -----------
-    data : ndarray
-        dMRI dataset containing volumes (first three dimensions) over time 
-        (fourth dimension). Expected shape is (X, Y, Z, t).
-    
-    affine : ndarray
-        The affine matrix for the data. Used when saving the results.
-    
-    gtab : GradientTable object
-        Object that contains information about the b-values and b-vectors.
-    
-    mapmri_params : dict, optional
-        Parameters for the MAPMRI fitting. Defaults include various model-related parameters. 
-        If not provided, default parameters are used.
-    
-    bval_threshold : float, optional
-        Threshold for the b-values to be used in the model. If not provided, 
-        set to infinity (use all b-values).
-    
-    metrics_to_save : list of str, optional
-        List of metric names that you wish to compute and save. If not provided, 
-        all available metrics are computed and saved. Available metrics are:
-        ['MSD', 'QIV', 'RTOP', 'RTAP', 'RTPP', 'NG'].
-
-    cur_subj : str, optional
-        Name of the current subject. Used when naming the output files. If not provided,
-        'unnamed' will be used.
-    
-    res_mapmri_subj_dir : str, optional
-        Directory path where the metrics should be saved. If not provided, metrics 
-        are saved in the current working directory.
-
-    Returns:
-    --------
-    None
-        The function saves the computed metrics to the specified directory and doesn't return any value.
-
-    """
-
-    # If results folder is not defined, set the current working directory for exporting
-    if res_mapmri_subj_dir==None:
-        res_mapmri_subj_dir = os.getcwd()
-    
-    # If bval_threshold is not defined, set it as infinite
-    if bval_threshold==None:
-        bval_threshold = np.inf
-
-    # If not defined, use the following default parameters for MAPMRI
-    if mapmri_params==None:
+    # Default parameters for MAPMRI
+    if mapmri_params is None:
         mapmri_params = dict(radial_order=6,
                              laplacian_regularization=True,
                              laplacian_weighting=0.2,
@@ -115,99 +38,64 @@ def mapmri_fit_and_save(data, affine, gtab, mapmri_params=None, bval_threshold=N
                              pos_radius='adaptive',
                              anisotropic_scaling=True,
                              eigenvalue_threshold=1e-04,
+                             bval_threshold=np.inf,
                              dti_scale_estimation=True,
                              static_diffusivity=0.7e-3,
                              cvxpy_solver=None)
 
     # Fit MAPMRI model to the data
-    print(f"Fitting the MAPMRI model to the data (bval_threshold={bval_threshold}; {mapmri_params})")
-    map_model = MapmriModel(gtab, bval_threshold=bval_threshold, **mapmri_params)
+    map_model = MapmriModel(gtab, **mapmri_params)
     mapfit = map_model.fit(data)
 
-    # Definition of metric calculations as lambda functions to delay execution
-    metrics = {
-        'MSD': lambda: mapfit.msd(),
-        'QIV': lambda: mapfit.qiv(),
-        'RTOP': lambda: mapfit.rtop(),
-        'RTAP': lambda: mapfit.rtap(),
-        'RTPP': lambda: mapfit.rtpp(),
-        'NG': lambda: mapfit.ng()
-    }
+    # Extract metrics from the model
+    MSD = mapfit.msd()
+    QIV = mapfit.qiv()
+    RTOP = mapfit.rtop()
+    RTAP = mapfit.rtap()
+    RTPP = mapfit.rtpp()
 
-    # If not defined which metrics to save, save all metrics
-    if metrics_to_save is None:
-        metrics_to_save = list(metrics.keys())
+    return MSD, QIV, RTOP, RTAP, RTPP
 
-    # Compute and save all the metrics of interest
-    for metric_name in metrics_to_save:
-        # Ensure the metric name is valid
-        if metric_name in metrics:
-            # Compute the metric
-            metric_value = metrics[metric_name]()
-            # Save the metric
-            metric_dir = os.path.join(res_mapmri_subj_dir, f'{cur_subj}_{metric_name}.nii.gz')
-            save_nifti(metric_dir, metric_value, affine)
-            print(f"{colours.CBLUE}Metric {metric_name} computed and saved to {metric_dir}{colours.CEND}")
-        else:
-            print(f"{colours.CRED}Warning: Metric {metric_name} not recognized and will not be computed.{colours.CEND}")
+def metrics_to_nifti(affine, MSD, QIV, RTOP, RTAP, RTPP, out_file_prefix, res_dir):
+    from dipy.io.image import save_nifti
+    from mribrew.utils import colours
+    import os
 
-def metric_correction_and_save(metric_name, threshold, cur_subj, res_mapmri_subj_dir, correct_neg=True, replace_with=0):
-    """
-    Load a metric NIfTI file, correct its values based on specified criteria, and save the corrected NIfTI file.
+    # Define the metrics and list for exporting directories
+    metrics = [MSD, QIV, RTOP, RTAP, RTPP]
+    metric_names = ["MSD", "QIV", "RTOP", "RTAP", "RTPP"]
+    out_files = []
 
-    Parameters:
-    -----------
-    metric_name : str
-        Name of the metric to be loaded and corrected (e.g., 'RTOP').
-        
-    threshold : float
-        Threshold value above which the metric values are set to the replace_with value.
+    # Save all the metrics as NIfTI files
+    subject_dir = os.path.join(res_dir, out_file_prefix)
+    os.makedirs(os.path.join(res_dir, 'mapmri', subject_dir), exist_ok=True)
+    for metric, name in zip(metrics, metric_names):
+        out_file = os.path.join(subject_dir, f"{out_file_prefix}_{name}.nii.gz")
+        save_nifti(out_file, metric, affine)
+        out_files.append(out_file)
+    print(f"{colours.CBLUE}All metrics saved to {subject_dir}.{colours.CEND}")
 
-    cur_subj : str
-        Identifier for the current subject. Used for loading and saving the NIfTI files.
+    return tuple(out_files)
 
-    res_mapmri_subj_dir : str
-        Directory path where the metric NIfTI files are stored.
+def correct_metric_nifti(metric_path, threshold, correct_neg=True, replace_with=0):
+    import numpy as np
+    from dipy.io.image import load_nifti, save_nifti
 
-    correct_neg : bool, optional (default=True)
-        If True, negative values in the metric will be set to the replace_with value.
+    # Load the metric which needs correcting
+    metric, affine = load_nifti(metric_path)
 
-    replace_with : float, optional (default=0)
-        Value with which to replace the metric values that are either NaN, negative (if correct_neg is True), or above the threshold.
+    # Replace NaN values
+    metric[np.isnan(metric)] = replace_with
 
-    Returns:
-    --------
-    None
-        The function saves the corrected metric to the specified directory and doesn't return any value.
-
-    """
-
-    # Print the correction parameters and initialize log list
-    neg_msg = "and negative values" if correct_neg else ""
-    print(f"Correcting the {metric_name} metric by replacing NaNs, values over {threshold} {neg_msg} with {replace_with}...")
-
-    # Load the metric NIfTI file
-    metric, affine = load_nifti(os.path.join(res_mapmri_subj_dir, f'{cur_subj}_{metric_name}.nii.gz'))
-
-    # Count and replace NaN values
-    num_nan_values = np.sum(np.isnan(metric))
-    if num_nan_values > 0:
-        metric[np.isnan(metric)] = replace_with
-        print(f"{num_nan_values} NaN values found and replaced with {replace_with}")
-
-    # Count and replace negative values if correct_neg is True
-    num_neg_values = np.sum(metric < 0)
-    if correct_neg and num_neg_values > 0:
+    # If correct_neg is True, replace negative values
+    if correct_neg:
         metric[metric < 0] = replace_with
-        print(f"{num_neg_values} negative values found and replaced with {replace_with}")
 
-    # Count and replace values above the threshold
-    num_above_threshold = np.sum(metric > threshold)
-    if num_above_threshold > 0:
-        metric[metric > threshold] = replace_with
-        print(f"{num_above_threshold} values above {threshold} found and replaced with {replace_with}")
+    # Replace values above the threshold
+    metric[metric > threshold] = replace_with
+    
+    # Save the corrected metric to the same folder, but with modified name
+    out_file = metric_path.replace(".nii.gz", "_corrected.nii.gz")
+    save_nifti(out_file, metric, affine)
 
-
-    # Save the corrected metric NIfTI file
-    save_nifti(os.path.join(res_mapmri_subj_dir, f'{cur_subj}_{metric_name}_corrected.nii.gz'), metric, affine)
-    print(colours.CBLUE + f"Corrected metric saved to {cur_subj}_{metric_name}_corrected.nii.gz" + colours.CEND)
+    return out_file

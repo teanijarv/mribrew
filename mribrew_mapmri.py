@@ -1,12 +1,31 @@
 import os
 import numpy as np
-from dipy.io.image import load_nifti
-from dipy.core.gradients import gradient_table
+from nipype import Function, Workflow, config, logging
+import nipype.interfaces.utility as niu
+import nipype.pipeline.engine as pe
+from nipype.interfaces import io
 
-from mribrew.utils import colours, Tee, should_use_subset_data
-from mribrew.mapmri_funcs import correct_neg_data, mapmri_fit_and_save, metric_correction_and_save
+from mribrew.utils import colours
+from mribrew.data_io import read_dwi_data
+from mribrew.mapmri_funcs import correct_neg_data, fit_mapmri_model, metrics_to_nifti, correct_metric_nifti
 
-# MAPMRI parameters and other constants
+# ---------------------- Set up directory structures and constant variables ----------------------
+cwd = os.getcwd()
+data_dir = os.path.join(cwd, 'data')
+raw_dir = os.path.join(data_dir, 'raw')
+proc_dir = os.path.join(data_dir, 'proc')
+wf_dir = os.path.join(cwd, 'wf')
+res_dir = os.path.join(data_dir, 'res')
+log_dir = os.path.join(wf_dir, 'log')
+
+subject_list = next(os.walk(proc_dir))[1]  # processed subjects
+
+# Computational variables
+use_subset_data = False
+processing_type = 'MultiProc' # or 'Linear'
+n_cpus = 12
+
+# MAPMRI variables
 big_delta, small_delta = 0.0353, 0.0150
 mapmri_params = dict(radial_order=4,
                      laplacian_regularization=True,
@@ -17,75 +36,122 @@ mapmri_params = dict(radial_order=4,
                      pos_radius='adaptive',
                      anisotropic_scaling=True,
                      eigenvalue_threshold=1e-04,
+                     bval_threshold=np.inf,
                      dti_scale_estimation=True,
                      static_diffusivity=0.7e-3,
                      cvxpy_solver=None)
 
-# Define folder directories and structures
-cwd = os.getcwd()
-data_dir = os.path.join(cwd, 'data')
-raw_dir = os.path.join(data_dir, 'raw')
-proc_dir = os.path.join(data_dir, 'proc')
-res_dir = os.path.join(data_dir, 'res')
-subj_dirs = next(os.walk(proc_dir))[1]  # processed subjects
+# Set up logging
+os.makedirs(log_dir, exist_ok=True)
+config.update_config({'logging': {'log_directory': log_dir,'log_to_file': True}})
+logging.update_logging(config)
 
-# Ask the user whether they want to use only small part of the data (for testing)
-use_subset_data = should_use_subset_data()
-
-# Create log file in results directory and export all console output
-Tee(res_dir)
-
-# Start of the pipeline
 print(f"\n{colours.UBOLD}{colours.CYELLOW}Starting the MAPMRI pipeline...{colours.CEND}")
-print(f"[Info] For changing any model parameters etc, please make changes inside the code.")
+print(f"Using the following constants:\n"
+      f"MAPMRI Parameters: {mapmri_params}\n"
+      f"Small delta: {small_delta}\n"
+      f"Big delta: {big_delta}\n"
+      f"Using subset data: {use_subset_data}\n"
+      f"Number of CPUs: {n_cpus}\n"
+      f"Processing type: {processing_type}\n")
 
-# Iterate over each subject, process data and save results
-for i, cur_subj in enumerate(subj_dirs):
-    print(f"\n{colours.CGREEN}Running MAPMRI on {cur_subj} ({i+1}/{len(subj_dirs)}){colours.CEND}")
-    
-    # Set file paths for DWI, mask and bval/bvec for the current subject
-    cur_subj_dir = os.path.join(proc_dir, cur_subj, 'dwi')
-    data_file = os.path.join(cur_subj_dir, 'eddy_corrected.nii.gz')
-    mask_file = os.path.join(cur_subj_dir, 'brain_dwi_mask.nii.gz')
-    bval_file = os.path.join(cur_subj_dir, 'gradChecked.bval')
-    bvec_file = os.path.join(cur_subj_dir, 'gradChecked.bvec')
-    
-    # Load the data
-    data, affine = load_nifti(data_file)
-    print("The data [shape = %s] has been read." % str(data.shape))
+# ---------------------- INPUT SOURCE NODES ----------------------
+print(colours.CGREEN + "Creating Source Nodes." + colours.CEND)
 
-    # Load the gradient information
-    bvals, bvecs = np.loadtxt(bval_file), np.loadtxt(bvec_file).T
-    gtab = gradient_table(bvals, bvecs, big_delta, small_delta)
-    print("The gradient table created [bvals shape = %s; bvecs shape = %s; "
-          "big delta = %s; small delta = %s]" % (gtab.bvals.shape, gtab.bvecs.shape,
-                                                 gtab.big_delta, gtab.small_delta))
-    
-    # Load the mask and use it to exclude non-brain regions
-    mask = load_nifti(mask_file)[0]
-    data = data * mask[..., np.newaxis]
-    print("The mask [shape = %s] has been applied to the data." % str(mask.shape))
+# Set up input files
+info = dict(dwi_eddy_file=[['subject_id', 'dwi', 'eddy_corrected.nii.gz']],
+            bvec_file=[['subject_id', 'dwi', 'gradChecked.bvec']],
+            bval_file=[['subject_id', 'dwi', 'gradChecked.bval']],
+            dwi_mask_file=[['subject_id', 'dwi', 'brain_dwi_mask.nii.gz']])
 
-    # (TESTING) Extract only a subset of the data to speed up the computation
-    if use_subset_data:
-        data = data[:, 40:50, 30:40]
-        print("Using subset of the data [shape = %s]" % str(data.shape))
+# Set up infosource node
+infosource = pe.Node(niu.IdentityInterface(fields=['subject_id']), name='infosource')
+infosource.iterables = [('subject_id', subject_list)]
+infosource.inputs.big_delta = big_delta
+infosource.inputs.small_delta = small_delta
+infosource.inputs.use_subset_data = use_subset_data
 
-    # Averaging negative values of the data
-    print("Looking for negative voxels in the data...")
-    data = correct_neg_data(data)
+# Set up datasource node
+datasource = pe.Node(io.DataGrabber(infields=['subject_id'], outfields=list(info.keys())),
+                                    name='datasource')
+datasource.inputs.base_directory = proc_dir
+datasource.inputs.template = "%s/%s/%s"
+datasource.inputs.template_args = info
+datasource.inputs.sort_filelist = True
 
-    # Create results folder if doesn't exist
-    res_mapmri_subj_dir = os.path.join(res_dir, 'mapmri', cur_subj)
-    os.makedirs(res_mapmri_subj_dir, exist_ok=True)
+# ---------------------- PROCESSING NODES ----------------------
+print(colours.CGREEN + "Creating Processing Nodes." + colours.CEND)
 
-    # Fit MAPMRI model to the data and save metric
-    mapmri_fit_and_save(data=data, affine=affine, gtab=gtab, mapmri_params=mapmri_params,
-                        bval_threshold=np.inf, metrics_to_save=['MSD', 'QIV', 'RTOP', 'RTAP', 'RTPP'],
-                        cur_subj=cur_subj, res_mapmri_subj_dir=res_mapmri_subj_dir)
-    
-    # Correct RTOP metric values and save the corrected metric
-    metric_correction_and_save(metric_name='RTOP', threshold=2000000, cur_subj=cur_subj,
-                           res_mapmri_subj_dir=res_mapmri_subj_dir, correct_neg=True, replace_with=0)
+# Set up a node for loading in DWI data (and apply mask) and gradient table
+read_data = pe.Node(Function(input_names=['data_file', 'mask_file',
+                                          'bvec_file', 'bval_file',
+                                          'big_delta', 'small_delta',
+                                          'use_subset_data'],
+                             output_names=['data', 'affine', 'gtab'],
+                             function=read_dwi_data),
+                    name='read_data')
+read_data.inputs.big_delta = big_delta
+read_data.inputs.small_delta = small_delta
+read_data.inputs.use_subset_data = use_subset_data
 
-print(f"\n{colours.UBOLD}{colours.CYELLOW}MAPMRI pipeline has finished.{colours.CEND}")
+# Set up a node for correcting negative values to average volume value per timepoint
+data_correction = pe.Node(Function(input_names=['data'],
+                                   output_names=['data_corrected'],
+                                   function=correct_neg_data),
+                          name='data_correction')
+
+# Set up a node for fitting data to the MAPMRI model
+fit_mapmri = pe.Node(Function(input_names=['data', 'gtab', 'mapmri_params'],
+                              output_names=['MSD', 'QIV', 'RTOP', 'RTAP', 'RTPP'],
+                              function=fit_mapmri_model),
+                     name='fit_mapmri')
+fit_mapmri.inputs.mapmri_params = mapmri_params
+
+# ---------------------- OUTPUT NODES ----------------------
+print(colours.CGREEN + "Creating Output Nodes." + colours.CEND)
+
+# Set up a node for saving metrics as NIfTI
+metrics_to_nii = pe.Node(Function(input_names=['affine', 'MSD', 'QIV', 'RTOP', 'RTAP', 
+                                               'RTPP', 'out_file_prefix', 'res_dir'],
+                              output_names=['MSD_file', 'QIV_file', 'RTOP_file', 
+                                            'RTAP_file', 'RTPP_file'],
+                              function=metrics_to_nifti),
+                     name='metrics_to_nii')
+metrics_to_nii.inputs.res_dir = os.path.join(res_dir, 'mapmri')
+
+# Set up a node for correcting RTOP metric and saving as NIfTI 
+rtop_corrected_to_nii = pe.Node(Function(input_names=['metric_path', 'threshold', 
+                                                      'correct_neg', 'replace_with'],
+                              output_names=['out_file'],
+                              function=correct_metric_nifti),
+                     name='rtop_corrected_to_nii')
+rtop_corrected_to_nii.inputs.threshold = 2000000
+rtop_corrected_to_nii.inputs.correct_neg = True
+rtop_corrected_to_nii.inputs.replace_with = 0
+
+# ---------------------- CREATE WORKFLOW AND CONNECT NODES ----------------------
+print(colours.CGREEN + 'Connecting Nodes.\n' + colours.CEND)
+
+workflow = Workflow(name='mapmri_wf', base_dir=f"{wf_dir}")
+workflow.connect([
+    (infosource, datasource, [('subject_id', 'subject_id')]),
+    (datasource, read_data, [('dwi_eddy_file', 'data_file'),
+                             ('dwi_mask_file', 'mask_file'),
+                             ('bvec_file', 'bvec_file'),
+                             ('bval_file', 'bval_file')]),
+    (read_data, data_correction, [('data', 'data')]),
+    (data_correction, fit_mapmri, [('data_corrected', 'data')]),
+    (read_data, fit_mapmri, [('gtab', 'gtab')]),
+    (fit_mapmri, metrics_to_nii, [('MSD', 'MSD'),
+                               ('QIV', 'QIV'),
+                               ('RTOP', 'RTOP'),
+                               ('RTAP', 'RTAP'),
+                               ('RTPP', 'RTPP')]),
+    (read_data, metrics_to_nii, [('affine', 'affine')]),
+    (infosource, metrics_to_nii, [('subject_id', 'out_file_prefix')]),
+    (metrics_to_nii, rtop_corrected_to_nii, [('RTOP_file', 'metric_path')])
+])
+
+if __name__ == '__main__':
+    workflow.write_graph(graph2use='orig')
+    workflow.run(plugin=processing_type, plugin_args={'n_procs' : n_cpus})
