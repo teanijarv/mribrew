@@ -23,7 +23,8 @@ subject_list = next(os.walk(proc_dir))[1]  # processed subjects
 # Computational variables
 use_subset_data = False
 processing_type = 'MultiProc' # or 'Linear'
-n_cpus = 12
+n_cpus = 2
+os.environ['OMP_NUM_THREADS'] = '2'  # or whatever number of threads you desire
 
 # MAPMRI variables
 big_delta, small_delta = 0.0353, 0.0150
