@@ -1,4 +1,14 @@
 def correct_neg_data(data):
+    """
+    Correct negative values in the data by replacing them with the average volume 
+    value for that specific timepoint.
+
+    Parameters:
+    - data (numpy.ndarray): 4D array representing MRI data with shape (x, y, z, time).
+
+    Returns:
+    - numpy.ndarray: Corrected data.
+    """
     import numpy as np
 
     # Mask of voxels with negative for each time point
@@ -24,6 +34,17 @@ def correct_neg_data(data):
     return data
 
 def fit_mapmri_model(data, gtab, mapmri_params=None):
+    """
+    Fit the MAPMRI model to the given data.
+
+    Parameters:
+    - data (numpy.ndarray): MRI data.
+    - gtab (object): Gradient table object.
+    - mapmri_params (dict, optional): Dictionary containing parameters for the MAPMRI model.
+
+    Returns:
+    - tuple: Computed MAPMRI metrics (MSD, QIV, RTOP, RTAP, RTPP).
+    """
     import numpy as np
     from dipy.reconst.mapmri import MapmriModel
 
@@ -57,6 +78,18 @@ def fit_mapmri_model(data, gtab, mapmri_params=None):
     return MSD, QIV, RTOP, RTAP, RTPP
 
 def metrics_to_nifti(affine, MSD, QIV, RTOP, RTAP, RTPP, out_file_prefix, res_dir):
+    """
+    Save computed metrics as NIfTI files.
+
+    Parameters:
+    - affine (numpy.ndarray): Affine transformation for the NIfTI data.
+    - MSD, QIV, RTOP, RTAP, RTPP (numpy.ndarray): Computed metrics.
+    - out_file_prefix (str): Prefix for the output file names.
+    - res_dir (str): Directory to save the resulting files.
+
+    Returns:
+    - tuple: Paths to the saved metric NIfTI files.
+    """
     from dipy.io.image import save_nifti
     from mribrew.utils import colours
     import os
@@ -78,6 +111,19 @@ def metrics_to_nifti(affine, MSD, QIV, RTOP, RTAP, RTPP, out_file_prefix, res_di
     return tuple(out_files)
 
 def correct_metric_nifti(metric_path, threshold, correct_neg=True, replace_with=0):
+    """
+    Correct a given metric by replacing NaN values, negative values, and 
+    values above a specified threshold.
+
+    Parameters:
+    - metric_path (str): Path to the metric NIfTI file to be corrected.
+    - threshold (float): Threshold value for the metric.
+    - correct_neg (bool, optional): If True, negative values in the metric will be replaced. Default is True.
+    - replace_with (float, optional): Value to replace NaN, negative, or threshold-exceeding values with. Default is 0.
+
+    Returns:
+    - str: Path to the corrected NIfTI file.
+    """
     import numpy as np
     from dipy.io.image import load_nifti, save_nifti
 

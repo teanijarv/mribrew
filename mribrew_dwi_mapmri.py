@@ -7,12 +7,12 @@ from nipype.interfaces import io
 
 from mribrew.utils import colours
 from mribrew.data_io import read_dwi_data
-from mribrew.mapmri_funcs import correct_neg_data, fit_mapmri_model, metrics_to_nifti, correct_metric_nifti
+from mribrew.mapmri_funcs import (correct_neg_data, fit_mapmri_model, 
+                                  metrics_to_nifti, correct_metric_nifti)
 
 # ---------------------- Set up directory structures and constant variables ----------------------
 cwd = os.getcwd()
 data_dir = os.path.join(cwd, 'data')
-raw_dir = os.path.join(data_dir, 'raw')
 proc_dir = os.path.join(data_dir, 'proc')
 wf_dir = os.path.join(cwd, 'wf')
 res_dir = os.path.join(data_dir, 'res')
@@ -23,8 +23,19 @@ subject_list = next(os.walk(proc_dir))[1]  # processed subjects
 # Computational variables
 use_subset_data = False
 processing_type = 'MultiProc' # or 'Linear'
-n_cpus = 2
-os.environ['OMP_NUM_THREADS'] = '2'  # or whatever number of threads you desire
+total_memory = 6 # in GB
+n_cpus = 6 # number of nipype processes to run at the same time
+os.environ['OMP_NUM_THREADS'] = str(n_cpus)
+os.environ["NUMEXPR_NUM_THREADS"] = str(n_cpus)
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+
+plugin_args = {
+    'n_procs': n_cpus,
+    'memory_gb': total_memory,
+    'raise_insufficient': True,
+    'scheduler': 'mem_thread',  # Prioritize jobs by memory consumption then nr of threads
+}
 
 # MAPMRI variables
 big_delta, small_delta = 0.0353, 0.0150
@@ -53,8 +64,9 @@ print(f"Using the following constants:\n"
       f"Small delta: {small_delta}\n"
       f"Big delta: {big_delta}\n"
       f"Using subset data: {use_subset_data}\n"
-      f"Number of CPUs: {n_cpus}\n"
-      f"Processing type: {processing_type}\n")
+      f"Processing type: {processing_type}\n"
+      f"Number of parellel processes: {n_cpus}\n"
+      f"Number of total memory allocated: {total_memory}\n")
 
 # ---------------------- INPUT SOURCE NODES ----------------------
 print(colours.CGREEN + "Creating Source Nodes." + colours.CEND)
@@ -155,4 +167,4 @@ workflow.connect([
 
 if __name__ == '__main__':
     workflow.write_graph(graph2use='orig')
-    workflow.run(plugin=processing_type, plugin_args={'n_procs' : n_cpus})
+    workflow.run(plugin=processing_type, plugin_args=plugin_args)
