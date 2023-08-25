@@ -1,14 +1,20 @@
 # mribrew
 
-This repository contains scripts and tools for analyzing diffusion MRI data using MAPMRI. In future, there are plans to include more diffusion and functional MRI analysis techniques.
+This repository contains scripts and tools for pre-processing DWI data and analyzing it using MAPMRI. In future, there are plans to include more diffusion and functional MRI analysis techniques.
 
 ## Getting Started
 
-### Scripts Overview
+### Overview
 
-- `mribrew_mapmri.py`: This is the main script you need to run for the MAPMRI analysis.
-- `mribrew/mapmri_funcs.py`: Contains all the MAPMRI-related functions required by the main script.
-- `mribrew/utils.py`: All utility scripts.
+#### Main scripts
+- `mribrew_dwi_processing.py`: Script to run for pre-processing the raw DWI data.
+- `mribrew_dwi_mapmri.py`: Script to run for MAPMRI analysis using processed DWI data.
+
+#### Functions
+- `mribrew/data_io.py`: All functions for data input-output.
+- `mribrew/utils.py`: All utility functions.
+- `mribrew/mapmri_funcs.py`: Contains all the MAPMRI-related functions required by the main MAPMRI script.
+- `mribrew/dwiproc_interface.py`: Contains the helping interface for the DWI pre-processing main script.
 
 ### Data Folder Structure
 
@@ -60,10 +66,10 @@ data/
 
 ## Running the Analysis
 
-Run the `mribrew_mapmri.py` script from the root directory of the project to begin the analysis:
+Run the `mribrew_dwi_mapmri.py` script from the root directory of the project to begin the analysis:
 
 ```bash
-python mribrew_mapmri.py
+python mribrew_dwi_mapmri.py
 ```
 
 ### Dependencies
@@ -72,6 +78,7 @@ Make sure you have all the necessary dependencies installed and the data is orga
 - numpy
 - dipy
 - nipype
+- (probably is more -> adding soon!)
 
 ## Contribution
 
