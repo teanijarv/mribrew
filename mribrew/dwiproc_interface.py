@@ -46,7 +46,7 @@ class checkDimension(BaseInterface):
         self.axialCutX, self.axialCutY, self.axialCutZ = 0, 0, 0
         
         # Load the file and retrieve its spatial dimensions
-        dimX, dimY, dimZ = nib.load(self.inputs.in_file).shape[:-1]
+        dimX, dimY, dimZ = nib.load(self.inputs.in_file).get_fdata().shape
         
         # Set flags to 1 if the respective dimension is odd
         if dimX % 2: self.axialCutX = 1

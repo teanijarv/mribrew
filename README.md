@@ -75,10 +75,11 @@ python mribrew_dwi_mapmri.py
 ### Dependencies
 Make sure you have all the necessary dependencies installed and the data is organized as per the above structure.
 
-- numpy
-- dipy
-- nipype
-- (probably is more -> adding soon!)
+- FSL
+- Nipype
+- Graphviz
+- MRtrix3
+- DIPY
 
 ## Contribution
 
