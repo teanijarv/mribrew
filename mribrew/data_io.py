@@ -15,3 +15,20 @@ def read_dwi_data(data_file, mask_file, bvec_file, bval_file,
     gtab = gradient_table(bvals, bvecs, big_delta, small_delta)
 
     return data, affine, gtab
+
+# Save matrices as pickle files
+def save_to_pickle(data, filename):
+    import os
+    import pickle
+    filepath = os.path.abspath(filename)
+    with open(filepath, 'wb') as f:
+        pickle.dump(data, f)
+    return filepath
+
+# Read in the corr matrices for this subject
+def read_pickle(filepath):
+    import os
+    import pickle
+    with open(filepath, 'rb') as f:
+        var = pickle.load(f)
+    return var
