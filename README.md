@@ -9,12 +9,14 @@ This repository contains scripts and tools for pre-processing DWI data and analy
 #### Main scripts
 - `mribrew_dwi_processing.py`: Script to run for pre-processing the raw DWI data.
 - `mribrew_dwi_mapmri.py`: Script to run for MAPMRI analysis using processed DWI data.
+- `mribrew_rsfmri_ebmconnectivity.py`: Script to run for functional connectivity analysis based on EBM stages with DK and Schaefer atlases using processed RSfMRI data.
 
 #### Functions
 - `mribrew/data_io.py`: All functions for data input-output.
 - `mribrew/utils.py`: All utility functions.
 - `mribrew/mapmri_funcs.py`: Contains all the MAPMRI-related functions required by the main MAPMRI script.
 - `mribrew/dwiproc_interface.py`: Contains the helping interface for the DWI pre-processing main script.
+- `mribrew/rsfmri_ebm_interface.py`: Contains all the EBM RSfMRI connectivity related functions required by the main RSfMRI EBM connectivity script.
 
 ### Data Folder Structure
 
@@ -76,16 +78,18 @@ python mribrew_dwi_mapmri.py
 Make sure you have all the necessary dependencies installed and the data is organized as per the above structure.
 
 - FSL
+- nibabel
 - Nipype
 - Graphviz
 - MRtrix3
 - DIPY
+- nilearn
 
 ## Contribution
 
 If you'd like to contribute to this project or have any questions, please open an issue or submit a pull request.
 
-## References
+## References (needs to be updated)
 
 [1] Harris, C.R., Millman, K.J., van der Walt, S.J. et al. Array programming with NumPy. Nature 585, 357–362 (2020). DOI: 10.1038/s41586-020-2649-2.
 
