@@ -13,7 +13,7 @@ from mribrew.rsfmri_ebm_interface import (setup_ebm_rois, extract_ebm_timeseries
 # Define constants and paths
 cwd = os.getcwd()
 data_dir = os.path.join(cwd, 'data')
-proc_dir = os.path.join(data_dir, 'proc_test')
+proc_dir = os.path.join(data_dir, 'proc')
 wf_dir = os.path.join(cwd, 'wf')
 res_dir = os.path.join(data_dir, 'res')
 log_dir = os.path.join(wf_dir, 'log')
@@ -22,8 +22,8 @@ subject_list = next(os.walk(proc_dir))[1]  # processed subjects
 
 # Computational variables
 processing_type = 'MultiProc' # or 'Linear'
-total_memory = 6 # in GB
-n_cpus = 6 # number of nipype processes to run at the same time
+total_memory = 10 # in GB
+n_cpus = 10 # number of nipype processes to run at the same time
 os.environ['OMP_NUM_THREADS'] = str(n_cpus)
 os.environ["NUMEXPR_NUM_THREADS"] = str(n_cpus)
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -72,11 +72,13 @@ print(colours.CGREEN + "Creating Processing Nodes." + colours.CEND)
 extract_ebm_timeseries_node = pe.Node(Function(input_names=['rsfmri_file', 
                                                             'desikan_img', 'schaefer_img',
                                                             'desikan_labels', 'schaefer_labels', 
-                                                            'ebm_rois_desikan_schaefer_dict'],
+                                                            'ebm_rois_desikan_schaefer_dict',
+                                                            'nilearn_cache'],
                                                output_names=['ebm_time_series', 
                                                              'ebm_time_series_labelled'],
                                                function=extract_ebm_timeseries),
                                       name="extract_ebm_timeseries")
+extract_ebm_timeseries_node.inputs.nilearn_cache = "nilearn_cache"
 
 # Set up a node for computing correlation matrices for each subject
 compute_corrmatrices_node = pe.Node(Function(input_names=['ebm_time_series_labelled'],

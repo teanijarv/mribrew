@@ -160,32 +160,35 @@ def plot_template_ebm_regions(ebm_time_series, desikan_img, schaefer_img, plot_s
             view.open_in_browser()
 
 def extract_ebm_timeseries(rsfmri_file, desikan_img, schaefer_img, desikan_labels, schaefer_labels,
-                           ebm_rois_desikan_schaefer_dict):
+                           ebm_rois_desikan_schaefer_dict, nilearn_cache=None):
     import nibabel as nib
     from nilearn.image import resample_to_img
     from nilearn.maskers import NiftiLabelsMasker
 
     # Load fMRI data
     rsfmri_img = nib.load(rsfmri_file)
+
+    # Adjust the masker to use the Desikan atlas and extract all time series data from fmri img
+    masker = NiftiLabelsMasker(labels_img=desikan_img, standardize="zscore_sample", memory=nilearn_cache)
+    desikan_time_series = masker.fit_transform(rsfmri_img)
+
     # Resample the fMRI data to match the Schaefer atlas resolution and space
     resampled_rsfmri_img = resample_to_img(rsfmri_img, schaefer_img, interpolation='nearest')
 
-    # Loop through all the EBM stages and use the corresponding ROI indeces to extract ROI time series
+    # Adjust the masker to use Schaefer atlas and extract all time series from resampled fmri img
+    masker = NiftiLabelsMasker(labels_img=schaefer_img, standardize="zscore_sample", memory=nilearn_cache)
+    schaefer_time_series = masker.fit_transform(resampled_rsfmri_img)
+
+    # Loop through all ROIs and extract time series of the ones relevant for the current stage
     ebm_time_series = {}
     for stage, roi_indices in ebm_rois_desikan_schaefer_dict.items():
-        if stage == 'ebm_I':
-            # Adjust the masker to use the Desikan atlas and extract all time series data from fmri img
-            masker = NiftiLabelsMasker(labels_img=desikan_img, standardize="zscore_sample")#, memory="nilearn_cache")
-            all_time_series = masker.fit_transform(rsfmri_img)
-        else:
-            # Adjust the masker to use Schaefer atlas and extract all time series from resampled fmri img
-            masker = NiftiLabelsMasker(labels_img=schaefer_img, standardize="zscore_sample")#, memory="nilearn_cache")
-            all_time_series = masker.fit_transform(resampled_rsfmri_img)
-        
-        # Loop through all ROIs and extract time series of the ones relevant for the current stage
         ebm_time_series[stage] = {}
-        for idx in roi_indices:
-            ebm_time_series[stage][idx] = all_time_series[:, int(idx)-1]
+        if stage == 'ebm_I':
+            for idx in roi_indices:
+                ebm_time_series[stage][idx] = desikan_time_series[:, int(idx)-1]
+        else:
+            for idx in roi_indices:
+                ebm_time_series[stage][idx] = schaefer_time_series[:, int(idx)-1]
 
     # Replace the label indeces with region label names for each stage
     ebm_time_series_labelled = {}
@@ -262,7 +265,8 @@ def compute_corrmatrices(ebm_time_series_labelled):
 
 def aggregate_matrices(subject_list, ebm_rois_desikan_schaefer_dict, 
                        sub_corrmatrices_file, sub_partial_corrmatrices_file, 
-                       sub_hemi_corrmatrices_file, sub_hemi_partial_corrmatrices_file):
+                       sub_hemi_corrmatrices_file, sub_hemi_partial_corrmatrices_file,
+                       nipype=True, group='all'):
     import numpy as np
     import os
     from mribrew.data_io import read_pickle, save_to_pickle
@@ -294,9 +298,16 @@ def aggregate_matrices(subject_list, ebm_rois_desikan_schaefer_dict,
         all_hemi_partial_corrmatrices[stage] = np.stack(all_hemi_partial_corrmatrices[stage], axis=-1)
 
     # Save these all subjects' matrices to results folder
-    all_corrmatrices_file = save_to_pickle(all_corrmatrices, "./all_corrmatrices.pkl")
-    all_partial_corrmatrices_file = save_to_pickle(all_partial_corrmatrices, "./all_partial_corrmatrices.pkl")
-    all_hemi_corrmatrices_file = save_to_pickle(all_hemi_corrmatrices, "./all_hemi_corrmatrices.pkl")
-    all_hemi_partial_corrmatrices_file = save_to_pickle(all_hemi_partial_corrmatrices, "./all_hemi_partial_corrmatrices.pkl")
+    if nipype:
+        filepaths = [f"./{group}_corrmatrices.pkl", f"./{group}_partial_corrmatrices.pkl",
+                     f"./{group}_hemi_corrmatrices.pkl", f"./{group}_hemi_partial_corrmatrices.pkl"]
+    else:
+        filepaths = [f"./data/res/{group}_corrmatrices.pkl", f"./data/res/{group}_partial_corrmatrices.pkl",
+                     f"./data/res/{group}_hemi_corrmatrices.pkl", f"./data/res/{group}_hemi_partial_corrmatrices.pkl"]
+        
+    all_corrmatrices_file = save_to_pickle(all_corrmatrices, filepaths[0])
+    all_partial_corrmatrices_file = save_to_pickle(all_partial_corrmatrices, filepaths[1])
+    all_hemi_corrmatrices_file = save_to_pickle(all_hemi_corrmatrices, filepaths[2])
+    all_hemi_partial_corrmatrices_file = save_to_pickle(all_hemi_partial_corrmatrices, filepaths[3])
 
     return all_corrmatrices_file, all_partial_corrmatrices_file, all_hemi_corrmatrices_file, all_hemi_partial_corrmatrices_file
