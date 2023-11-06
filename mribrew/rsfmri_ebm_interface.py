@@ -82,7 +82,7 @@ def find_schaefer_at_ebm(ebm_stages_data, desikan_labels, desikan_img, schaefer_
 
     return overlap_dict
 
-def setup_ebm_rois():
+def setup_ebm_rois(ebm_stages_rois, overlap_plot_style=None):
     import abagen
     import pandas as pd
     import nibabel as nib
@@ -101,27 +101,16 @@ def setup_ebm_rois():
     schaefer_img = nib.load(schaefer_dict['maps'])
     schaefer_labels = {label.decode('utf-8'): float(idx+1) for idx, label in enumerate(schaefer_dict['labels'])}
 
-    # EBM stages definition
-    ebm_stages_data = {
-        'ebm_I': ['entorhinal', 'amygdala', 'hippocampus'],
-        'ebm_II': ['bankssts', 'fusiform', 'inferiortemporal', 'middletemporal', 'parahippocampal', 
-                'superiortemporal', 'temporalpole'],
-        'ebm_III': ['caudalmiddlefrontal', 'inferiorparietal', 'isthmuscingulate', 'lateraloccipital', 
-                    'posteriorcingulate', 'precuneus', 'superiorparietal', 'supramarginal'],
-        'ebm_IV': ['caudalanteriorcingulate', 'frontalpole', 'insula', 'lateralorbitofrontal', 
-                'medialorbitofrontal', 'parsopercularis', 'parsorbitalis', 'parstriangularis', 
-                'rostralanteriorcingulate', 'rostralmiddlefrontal', 'superiorfrontal'],
-    }
-
     # Find and create dict of Schaefer ROIs at EBM stages
-    ebm_rois_schaefer_dict = find_schaefer_at_ebm(ebm_stages_data, desikan_labels, desikan_img, schaefer_img)
+    ebm_rois_schaefer_dict = find_schaefer_at_ebm(ebm_stages_rois, desikan_labels, desikan_img, schaefer_img,
+                                                  plot_style=overlap_plot_style)
 
     # Create a copy of Schaefer ROIs at different EBM stages
     ebm_rois_desikan_schaefer_dict = ebm_rois_schaefer_dict.copy()
 
     # Get all EBM I ROIs and add indeces of these ROIs to list
     new_ebm_I_indices = []
-    for region in ebm_stages_data['ebm_I']:
+    for region in ebm_stages_rois['ebm_I']:
         # Get label names and indeces from Desikan-Killiany atlas dict
         for label, idx in desikan_labels.items():
             # If the ROI is a substring of the label, then add to list
@@ -277,7 +266,7 @@ def aggregate_matrices(subject_list, ebm_rois_desikan_schaefer_dict,
     all_hemi_corrmatrices = {stage: [] for stage in ebm_rois_desikan_schaefer_dict.keys()}
     all_hemi_partial_corrmatrices = {stage: [] for stage in ebm_rois_desikan_schaefer_dict.keys()}
     for i in range(len(subject_list)):
-        print(f"Reading in {subject_list[i]} and {sub_corrmatrices_file[i]}...")
+        # print(f"Reading in {subject_list[i]} and {sub_corrmatrices_file[i]}...")
         sub_corrmatrices = read_pickle(sub_corrmatrices_file[i])
         sub_partial_corrmatrices = read_pickle(sub_partial_corrmatrices_file[i])
         sub_hemi_corrmatrices = read_pickle(sub_hemi_corrmatrices_file[i])
