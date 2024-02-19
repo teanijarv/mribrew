@@ -290,13 +290,13 @@ class combineDWIBrainMask(BaseInterface):
     def _run_interface(self, runtime):
         """Combine the two brain masks."""
         output_dir = os.path.abspath('')
-        
+
         # Load both masks
-        mask1_img = nib.load(self.inputs.in_mask1).get_fdata()
-        mask2_img = nib.load(self.inputs.in_mask2).get_fdata()
+        mask1_img = nib.load(self.inputs.in_mask1)
+        mask2_img = nib.load(self.inputs.in_mask2)
 
         # Create the combined mask based on the BET mask
-        combined_mask = np.where(mask1_img > 0, 1, mask2_img)
+        combined_mask = np.where(mask1_img.get_fdata() > 0, 1, mask2_img.get_fdata())
         
         # Save the combined mask
         combined_mask_file = nib.Nifti1Image(combined_mask, mask2_img.affine, mask2_img.header)
