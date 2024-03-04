@@ -1,6 +1,14 @@
 # mribrew
 
-This repository contains scripts and tools for (1) converting raw DWI DICOM to NIfTI, (2) pre-processing raw DWI data and (3) running Mean Apparent Propagator MRI (MAPMRI) or Anatomically Constrained Tractography (ACT). Literally all you need is three DICOM files (T1, DWI (dir-AP), and DWI (dir-PA)) and you can run all these scripts in order to get to the final results.
+This repository contains scripts and tools for DWI data pre-processing and analysis. Its features include:
+
+(1) converting raw DWI DICOM to NIfTI; 
+
+(2) pre-processing raw DWI data;
+
+(3) running Mean Apparent Propagator MRI (MAPMRI) or Anatomically Constrained Tractography (ACT). 
+
+Literally all you need is three DICOM files (T1, DWI (dir-AP), and DWI (dir-PA)) and you can run all these scripts in order to get to the final results.
 
 ## Getting Started
 
