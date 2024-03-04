@@ -3,22 +3,26 @@ from nipype import config, logging
 import nipype.interfaces.utility as niu
 import nipype.pipeline.engine as pe
 from nipype.interfaces import io, mrtrix3, fsl
-import cmtklib.interfaces.mrtrix3 as cmp_mrt
 
 from mribrew.utils import colours
+from mribrew.act_interface import Generate5tt, SIFT, SIFT2
 
 # ---------------------- Set up directory structures and constant variables ----------------------
 cwd = os.getcwd()
+misc_dir = os.path.join(cwd, 'misc')
 data_dir = os.path.join(cwd, 'data')
-proc_dir = os.path.join(data_dir, 'proc')
+#proc_dir = os.path.join(data_dir, 'proc')
 wf_dir = os.path.join(cwd, 'wf')
 res_dir = os.path.join(data_dir, 'res', 'act')
 log_dir = os.path.join(wf_dir, 'log')
 
-subject_list = next(os.walk(proc_dir))[1]  # processed subjects
+fs_lut_file = os.path.join(misc_dir, 'fs_labels', 'FreeSurferColorLUT.txt')
+fs_default_file = os.path.join(misc_dir, 'fs_labels', 'fs_default.txt')
+
+# // TO-DO: read from CSV & potentially check for similar names (some have _1 or sth in the end)
+subject_list = next(os.walk(os.path.join(data_dir, 'proc', 'dwi_proc')))[1]  # processed subjects
 
 # Computational variables
-use_subset_data = False
 processing_type = 'MultiProc' # or 'Linear'
 total_memory = 6 # in GB
 n_cpus = 6 # number of nipype processes to run at the same time
@@ -28,7 +32,7 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 
 # ACT parameters
-n_tracts = 20000
+n_tracks = 20000 # 10000000
 
 plugin_args = {
     'n_procs': n_cpus,
@@ -39,7 +43,7 @@ plugin_args = {
 
 # Set up logging
 os.makedirs(log_dir, exist_ok=True)
-config.update_config({'logging': {'log_directory': log_dir,'log_to_file': True}})
+config.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
 logging.update_logging(config)
 
 # ---------------------- INPUT SOURCE NODES ----------------------
@@ -47,33 +51,33 @@ print(colours.CGREEN + "Creating Source Nodes." + colours.CEND)
 
 # Set up input files
 info = dict(
-    dwi_eddy_file=[['subject_id', 'dwi_proc', 'dwi', 'eddy_corrected.nii.gz']],
-    bvec_file=[['subject_id', 'dwi_proc', 'dwi', 'gradChecked.bvecs']],
-    bval_file=[['subject_id', 'dwi_proc', 'dwi', 'gradChecked.bvals']],
-    dwi_mask_file=[['subject_id', 'dwi_proc', 'dwi', 'dwi_mask.nii.gz']],
-    freesurfer_dir=[['subject_id', 'freesurfer']],
-    t1_file=[['subject_id', 'freesurfer', 'mri', 'T1.mgz']],
-    parc_file=[['subject_id', 'freesurfer', 'mri', 'aparc+aseg.mgz']]
+    dwi_eddy_file=[['data', 'proc', 'dwi_proc', 'subject_id', 'dwi', 'eddy_corrected.nii.gz']],
+    bvec_file=[['data', 'proc', 'dwi_proc', 'subject_id', 'dwi', 'gradChecked.bvecs']],
+    bval_file=[['data', 'proc', 'dwi_proc', 'subject_id', 'dwi', 'gradChecked.bvals']],
+    dwi_mask_file=[['data', 'proc', 'dwi_proc', 'subject_id', 'dwi', 'dwi_mask.nii.gz']],
+    freesurfer_dir=[['data', 'proc', 'freesurfer', 'subject_id']], # check this!
+    t1_file=[['data', 'proc', 'freesurfer', 'subject_id', 'mri', 'T1.mgz']], # check this!
+    parc_file=[['data', 'proc', 'freesurfer', 'subject_id', 'mri', 'aparc+aseg.mgz']], # check this!
 )
 
 # Set up infosource node
 infosource = pe.Node(niu.IdentityInterface(fields=['subject_id']), name='infosource')
 infosource.iterables = [('subject_id', subject_list)]
-infosource.inputs.use_subset_data = use_subset_data
+infosource.inputs.fs_lut_file = fs_lut_file
+infosource.inputs.fs_default_file = fs_default_file
 
 # Set up datasource node
 datasource = pe.Node(io.DataGrabber(infields=['subject_id'], outfields=list(info.keys())),
                                     name='datasource')
-datasource.inputs.base_directory = proc_dir
-datasource.inputs.template = "%s/%s/%s/%s"
+datasource.inputs.base_directory = cwd
+datasource.inputs.template = "%s/%s/%s/%s/%s/%s"
 datasource.inputs.field_template = {
-    'dwi_eddy_file': '%s/%s/%s/%s',
-    'bvec_file': '%s/%s/%s/%s',
-    'bval_file': '%s/%s/%s/%s',
-    'dwi_mask_file': '%s/%s/%s/%s',
-    'freesurfer_dir': '%s/%s',
-    't1_file': '%s/%s/%s/%s',
-    'parc_file': '%s/%s/%s/%s',
+    'dwi_eddy_file': '%s/%s/%s/%s/%s/%s',
+    'bvec_file': '%s/%s/%s/%s/%s/%s',
+    'bval_file': '%s/%s/%s/%s/%s/%s',
+    'dwi_mask_file': '%s/%s/%s/%s/%s/%s',
+    'freesurfer_dir': '%s/%s/%s/%s',
+    't1_file': '%s/%s/%s/%s/%s/%s',
 }
 datasource.inputs.template_args = info
 datasource.inputs.sort_filelist = True
@@ -109,7 +113,7 @@ mtn.inputs.out_file_gm = 'gmfod_norm.mif'
 mtn.inputs.out_file_csf = 'csffod_norm.mif'
 
 # 5-tissue-types image generation
-gen5tt = pe.Node(mrtrix3.Generate5tt(), name='gen5tt')
+gen5tt = pe.Node(Generate5tt(), name='gen5tt')
 gen5tt.inputs.algorithm = 'hsvs'
 gen5tt.inputs.out_file = '5tt_nocoreg.mif'
 
@@ -148,28 +152,57 @@ mrxform_5tt = pe.Node(mrtrix3.MRTransform(), name='mrxform_5tt')
 mrxform_5tt.inputs.invert = True
 mrxform_5tt.inputs.out_file = '5tt_coreg.mif'
 
+# Convert parc file to MIF, replace labels, and coregister to DWI
+parc_mif = pe.Node(mrtrix3.MRConvert(), name='parc_mif')
+parc_mif.inputs.args = '-datatype uint32'
+parc_mif.inputs.out_file = 'aparcaseg.mif'
+
+labelconv = pe.Node(mrtrix3.LabelConvert(), name='labelconv')
+labelconv.inputs.out_file = 'aparcaseg_label.mif'
+
+mrxform_parc = pe.Node(mrtrix3.MRTransform(), name='mrxform_parc')
+mrxform_parc.inputs.args = '-datatype uint32'
+mrxform_parc.inputs.invert = True
+mrxform_parc.inputs.out_file = 'aparcaseg_label_coreg.mif'
+
 # Anatomically constrained tractography (ACT)
 tk = pe.Node(mrtrix3.Tractography(), name='tk')
+tk.inputs.args = '-nthreads 50'
 tk.inputs.backtrack = True
-tk.inputs.select = n_tracts
-tk.inputs.out_file = f'tracks_{n_tracts}.tck'
+tk.inputs.select = n_tracks
+tk.inputs.out_file = f'tracks_{n_tracks}.tck'
 
 # Spherical-deconvolution informed filtering of tractograms (SIFT)
-sift = pe.Node(cmp_mrt.FilterTractogram(), name='sift')
-sift.inputs.args = f'–term_number {int(n_tracts/10)}'
-sift.inputs.out_file = f'tracts_sift_{int(n_tracts/10)}.tck'
+sift = pe.Node(SIFT(), name='sift')
+sift.inputs.args = f'–term_number {int(n_tracks/10)} -nthreads 50'
+sift.inputs.out_file = f'tracks_sift_{int(n_tracks/10)}.tck'
 
 # Tractograms to structural connectomes
 tck2conn = pe.Node(mrtrix3.BuildConnectome(), name='tck2conn')
 tck2conn.inputs.args = '–symmetric –zero_diagonal -scale_invnodevol'
-tck2conn.inputs.out_file = f'sc_sift_{int(n_tracts/10)}.csv'
+tck2conn.inputs.out_file = f'sc_sift_{int(n_tracks/10)}.csv'
+
+# # SIFT2
+# sift2 = pe.Node(SIFT2(), name='sift2')
+# sift2.inputs.args = '-nthreads 50'
+# sift2.inputs.out_file = 'sift2_tck_weights.txt'
+
+# # Tractograms to structural connectomes
+# tck2conn = pe.Node(mrtrix3.BuildConnectome(), name='tck2conn')
+# tck2conn.inputs.args = '–symmetric –zero_diagonal -scale_invnodevol'
+# tck2conn.inputs.out_file = f'sc_sift2_{int(n_tracks)}.csv'
+
 
 # ---------------------- CREATE WORKFLOW AND CONNECT NODES ----------------------
 print(colours.CGREEN + 'Connecting Nodes.\n' + colours.CEND)
 
 workflow = pe.Workflow(name='act_wf', base_dir=f"{wf_dir}")
 workflow.connect([
+# ---------------------- INPUT/OUTPUT STRUCTURE (Handling input/output directories)
+    
+    # Linking subject's information to data source
     (infosource, datasource, [('subject_id', 'subject_id')]),
+    # Setting the output directory structure based on the subject ID
     (infosource, datasink, [('subject_id',  'container')]),
 
 # ---------------------- FIBER ORIENTATION DISTRIBUTION (FOD for WM, GM, CSF)
@@ -219,7 +252,20 @@ workflow.connect([
     (gen5tt, mrxform_5tt, [('out_file', 'in_files')]),
     (transconv, mrxform_5tt, [('out_transform', 'linear_transform')]),
 
-# ---------------------- ANATOMICALLY CONSTRAINED TRACTOGRAPHY (ACT)
+# ---------------------- PARCELLATION PREP (parcellation image label edits & coregister to DWI)
+
+    (datasource, parc_mif, [('parc_file', 'in_file')]),
+
+    (parc_mif, labelconv, [('out_file', 'in_file')]),
+    (infosource, labelconv, [('fs_lut_file', 'in_lut')]),
+    (infosource, labelconv, [('fs_default_file', 'in_config')]),
+
+    # Coregister parcellations to DWI
+    (labelconv, mrxform_parc, [('out_file', 'in_files')]),
+    # (datasource, mrxform_parc, [('parc_file', 'in_files')]),
+    (transconv, mrxform_parc, [('out_transform', 'linear_transform')]),
+
+# ---------------------- ANATOMICALLY CONSTRAINED TRACTOGRAPHY (ACT) - SIFT
 
     # Perform ACT using 5TT image and determine seed points dynamically using WM FOD
     (mrxform_5tt, tk, [('out_file', 'act_file')]),
@@ -229,13 +275,36 @@ workflow.connect([
     (mrxform_5tt, sift, [('out_file', 'act_file')]),
     (tk, sift, [('out_file', 'in_tracks')]),
     (mtn, sift, [('out_file_wm', 'in_fod')]),
-    # Generate structural connectomes of tractograms
+    # Generate structural connectomes of SIFT tractograms
     (sift, tck2conn, [('out_tracks', 'in_file')]),
-    (datasource, tck2conn, [('parc_file', 'in_parc')]),
+    (mrxform_parc, tck2conn, [('out_file', 'in_parc')]),
 
 # ---------------------- DATASINK (save tractograms and structural connectomes)
-    (sift, datasink, [('out_tracks', '@tracts')]), 
+
+    # Save the tractograms and structural connectomes
+    (sift, datasink, [('out_tracks', '@tracks')]), 
     (tck2conn, datasink, [('out_file', '@sc')]), 
+
+# # ---------------------- ANATOMICALLY CONSTRAINED TRACTOGRAPHY (ACT) - SIFT2
+
+#     # Perform ACT using 5TT image and determine seed points dynamically using WM FOD
+#     (mrxform_5tt, tk, [('out_file', 'act_file')]),
+#     (mtn, tk, [('out_file_wm', 'seed_dynamic')]),
+#     (mtn, tk, [('out_file_wm', 'in_file')]),
+#     # SIFT2
+#     (mrxform_5tt, sift2, [('out_file', 'act_file')]),
+#     (tk, sift2, [('out_file', 'in_tracks')]),
+#     (mtn, sift2, [('out_file_wm', 'in_fod')]),
+#     # Generate structural connectomes of SIFT2 tractograms
+#     (tk, tck2conn, [('out_file', 'in_file')]),
+#     (sift2, tck2conn, [('out_weights', 'in_weights')]),
+#     (mrxform_parc, tck2conn, [('out_file', 'in_parc')]),
+
+# # ---------------------- DATASINK (save tractograms and structural connectomes)
+
+#     # Save the tractograms and structural connectomes
+#     (tk, datasink, [('out_file', '@tracks')]), 
+#     (tck2conn, datasink, [('out_file', '@sc')]), 
 ])
 
 if __name__ == '__main__':

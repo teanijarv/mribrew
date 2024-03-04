@@ -1,29 +1,51 @@
 # mribrew
 
-This repository contains scripts and tools for pre-processing DWI data and analyzing it using MAPMRI. In future, there are plans to include more diffusion and functional MRI analysis techniques.
+This repository contains scripts and tools for (1) converting raw DWI DICOM to NIfTI, (2) pre-processing raw DWI data and (3) running Mean Apparent Propagator MRI (MAPMRI) or Anatomically Constrained Tractography (ACT). Literally all you need is three DICOM files (T1, DWI (dir-AP), and DWI (dir-PA)) and you can run all these scripts in order to get to the final results.
 
 ## Getting Started
 
 ### Overview
 
 #### Main scripts
+- `mribrew_dcm2nifti.py`: Script to convert DICOM to NIfTI.
 - `mribrew_dwi_processing.py`: Script to run for pre-processing the raw DWI data.
-- `mribrew_dwi_mapmri.py`: Script to run for MAPMRI analysis using processed DWI data.
-- `mribrew_rsfmri_ebmconnectivity.py`: Script to run for functional connectivity analysis based on EBM stages with DK and Schaefer atlases using processed RSfMRI data.
-
-#### Functions
-- `mribrew/data_io.py`: All functions for data input-output.
-- `mribrew/utils.py`: All utility functions.
-- `mribrew/mapmri_funcs.py`: Contains all the MAPMRI-related functions required by the main MAPMRI script.
-- `mribrew/dwiproc_interface.py`: Contains the helping interface for the DWI pre-processing main script.
-- `mribrew/rsfmri_ebm_interface.py`: Contains all the EBM RSfMRI connectivity related functions required by the main RSfMRI EBM connectivity script.
+- `mribrew_dwi_mapmri.py`: Script to run MAPMRI analysis using processed DWI data.
+- `mribrew_dwi_act.py`: Script to run ACT using processed DWI data.
+- `mribrew_rsfmri_ebmconnectivity.py` (adding more fMRI functionality in future): Script to run for functional connectivity analysis based on EBM stages with DK and Schaefer atlases using processed RSfMRI data.
 
 ### Data Folder Structure
 
-For the scripts to run correctly by default, the following folder structure and naming conventions are expected:
+Follow the underlying folder structure for scripts to work without having to make modifications. 
+
+For `mribrew_dcm2nifti.py`, you need DICOM files in the `data/dcm/`. The output will be put to `data/raw/` which will be used by `mribrew_dwi_processing.py`. The processed files will be put to `data/proc/`. Finally, `mribrew_dwi_mapmri.py` or `mribrew_dwi_act.py` will use these processed files and their output will be at `data/res/`.
 
 ```
 data/
+└── dcm/
+    ├── sub-01/
+    │   ├── Serie_03_t1_mprage_sag_p2_iso_1.0.zip
+    │   ├── Serie_08_ep2d_diff_hardi_s2_pa.zip
+    │   └── Serie_10_ep2d_diff_hardi_s2.zip
+    ├── sub-02/
+    │   └── ...
+    └── ...
+└── raw/
+    ├── sub-01/
+    │   └── anat/
+    │       ├── T1w.json
+    │       └── T1w.nii.gz
+    │   └── dwi/
+    │       ├── dir-AP_dwi.bval
+    │       ├── dir-AP_dwi.bvec
+    │       ├── dir-AP_dwi.json
+    │       ├── dir-AP_dwi.nii.gz
+    │       ├── dir-PA_dwi.bval
+    │       ├── dir-PA_dwi.bvec
+    │       ├── dir-PA_dwi.json
+    │       └── dir-PA_dwi.nii.gz
+    ├── sub-02/
+    │   └── ...
+    └── ...
 └── proc/
     ├── sub-01/
     │   └── dwi/
@@ -34,44 +56,34 @@ data/
     ├── sub-02/
     │   └── ...
     └── ...
-```
-
-- The main data directory should be named `data/proc/`.
-- Each subject should have their own sub-directory within `data/proc/` (e.g., `sub-01`, `sub-02`).
-- Within each subject's directory, there should be a `dwi/` folder containing the required files:
-    - `eddy_corrected.nii.gz`: The eddy current corrected DWI data.
-    - `brain_dwi_mask.nii.gz`: The brain mask for the DWI data.
-    - `gradChecked.bval`: The gradient b-values.
-    - `gradChecked.bvec`: The gradient b-vectors.
-- Note: small delta and large delta are pre-defined in the `mribrew_mapmri.py` script - make sure to change that according to your dataset.
-
-### Results Folder Structure
-
-The resulting metrics from the MAPMRI analysis will be saved in the following default structure:
-
-```
-data/
 └── res/
-    └── mapmri/
-        ├── sub-01/
-        │   ├── sub-01_MSE.nii.gz
-        │   ├── sub-01_QIV.nii.gz
-        │   └── ...
-        ├── sub-02/
-        │   └── ...
-        └── ...
+    ├── sub-01/
+    │   └── mapmri/
+    │       ├── sub-01/
+    │       │   ├── sub-01_MSE.nii.gz
+    │       │   ├── sub-01_QIV.nii.gz
+    │       │   └── ...
+    │       ├── sub-02/
+    │       │   └── ...
+    │       └── ...
+    │   └── act/
+    │       ├── sc_sift_1000000.csv
+    │       └── tracks_sift_1000000.tck
+    ├── sub-02/
+    │   └── ...
+    └── ...
 ```
 
-- The main results directory is `data/res/mapmri/`.
-- Each subject's results will be saved in their respective sub-directory.
-- The naming convention for the metrics is, e.g., `sub-01_MSE.nii.gz` for the MSE metric of subject 01.
+Notes:
+- Small delta and large delta are pre-defined in the `mribrew_mapmri.py` script - make sure to change that according to your dataset.
+- `misc/`folder contains various files like `acqp.txt` and `dcm2nii_config.json` which you may need to change based on your data acquisition.
 
 ## Running the Analysis
 
-Run the `mribrew_dwi_mapmri.py` script from the root directory of the project to begin the analysis:
+Run the `mribrew_dwi_*.py` script from the root directory of the project to begin the analysis:
 
 ```bash
-python mribrew_dwi_mapmri.py
+python mribrew_dwi_*.py
 ```
 
 ### Dependencies
@@ -88,15 +100,3 @@ Make sure you have all the necessary dependencies installed and the data is orga
 ## Contribution
 
 If you'd like to contribute to this project or have any questions, please open an issue or submit a pull request.
-
-## References (needs to be updated)
-
-[1] Harris, C.R., Millman, K.J., van der Walt, S.J. et al. Array programming with NumPy. Nature 585, 357–362 (2020). DOI: 10.1038/s41586-020-2649-2.
-
-[2] Ozarslan E. et al., "Mean apparent propagator (MAP) MRI: A novel
-           diffusion imaging method for mapping tissue microstructure",
-           NeuroImage, 2013.
-
-[3] Fick, Rutger HJ, et al. "MAPL: Tissue microstructure estimation
-           using Laplacian-regularized MAP-MRI and its application to HCP
-           data." NeuroImage (2016).

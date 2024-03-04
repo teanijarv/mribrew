@@ -9,19 +9,21 @@ import mribrew.dwiproc_interface as ProcInterface
 
 # ---------------------- Set up directory structures and constant variables ----------------------
 cwd = os.getcwd()
+misc_dir = os.path.join(cwd, 'misc')
 data_dir = os.path.join(cwd, 'data')
 raw_dir = os.path.join(data_dir, 'raw')
-proc_dir = os.path.join(data_dir, 'proc')
+proc_dir = os.path.join(data_dir, 'proc', 'dwi_proc')
 wf_dir = os.path.join(cwd, 'wf')
 log_dir = os.path.join(wf_dir, 'log')
-acqp_file = os.path.join(raw_dir, 'acqp.txt')
+
+acqp_file = os.path.join(misc_dir, 'acqp.txt')
 
 # List of all subjects
 subject_list = next(os.walk(raw_dir))[1]
 
 # DWI sequence file names
-dwi_name = 'ep2d_diff_hardi_s2'
-dwipa_name = 'ep2d_diff_hardi_s2_pa'
+dwi_name = 'dir-AP_dwi' #'ep2d_diff_hardi_s2'
+dwipa_name = 'dir-PA_dwi' #'ep2d_diff_hardi_s2_pa'
 
 # Computational variables
 processing_type = 'MultiProc' # or 'Linear'
@@ -49,15 +51,15 @@ logging.update_logging(config)
 print(colours.CGREEN + "Creating Source Nodes." + colours.CEND)
 
 # Set up input files
-info = dict(dwi_file=[['subject_id', 'NII', '*%s.nii.gz' % dwi_name]],
-        bvec_file=[['subject_id', 'NII','*%s.bvec' % dwi_name]],
-        bval_file=[['subject_id', 'NII','*%s.bval' % dwi_name]],
-        dwiPA_file=[['subject_id','NII', '*%s.nii.gz' % dwipa_name]])
+info = dict(dwi_file=[['subject_id', 'dwi', '*%s.nii.gz' % dwi_name]],
+        bvec_file=[['subject_id', 'dwi','*%s.bvec' % dwi_name]],
+        bval_file=[['subject_id', 'dwi','*%s.bval' % dwi_name]],
+        dwiPA_file=[['subject_id','dwi', '*%s.nii.gz' % dwipa_name]])
 
 # Set up infosource node
 infosource = pe.Node(niu.IdentityInterface(fields=['subject_id']), name='infosource')
 infosource.iterables = [('subject_id', subject_list)]
-infosource.inputs.acqp_file = acqp_file
+infosource.inputs.acqp_file = acqp_file # add to the act similarly!!! ###############################################
 
 # Set up datasource node
 datasource = pe.Node(io.DataGrabber(infields=['subject_id'], outfields=list(info.keys())),
@@ -269,13 +271,13 @@ workflow.connect([
 # ---------------------- DATASINK (saving results)
     
     # Save the final DWI brain mask
-    (dwiMask, datasink, [('out_mask', 'dwi_proc.dwi.@dwi_mask')]), 
+    (dwiMask, datasink, [('out_mask', 'dwi.@dwi_mask')]), 
     # Save the eddy-corrected DWI
-    (eddy, datasink, [('out_corrected', 'dwi_proc.dwi.@eddy_corrected')]),
+    (eddy, datasink, [('out_corrected', 'dwi.@eddy_corrected')]),
     # Save the checked b-values post gradient check
-    (mrtrixGradCheck, datasink, [('out_bvals', 'dwi_proc.dwi.@bvals')]),
+    (mrtrixGradCheck, datasink, [('out_bvals', 'dwi.@bvals')]),
     # Save the checked b-vectors post gradient check
-    (mrtrixGradCheck, datasink, [('out_bvecs', 'dwi_proc.dwi.@bvecs')]),
+    (mrtrixGradCheck, datasink, [('out_bvecs', 'dwi.@bvecs')]),
 ])
 
 # Run the script and generate a graph of the workflow
