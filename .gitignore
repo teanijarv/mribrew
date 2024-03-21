@@ -1,4 +1,6 @@
 .DS_Store
 /wf
 /data
+/data copy
 __pycache__
+*.ipynb
