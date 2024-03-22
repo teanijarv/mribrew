@@ -20,6 +20,10 @@ log_dir = os.path.join(wf_dir, 'log')
 
 acqp_file = os.path.join(misc_dir, 'acqp.txt')
 
+# DWI sequence file names
+dwi_name = 'dir-AP_dwi'
+dwipa_name = 'dir-PA_dwi'
+
 # List of all subjects
 subject_list = next(os.walk(raw_dir))[1]
 
@@ -30,9 +34,19 @@ for sub in subject_list:
     for scan in scans:
         subject_scan_list.append([sub, scan])
 
-# DWI sequence file names
-dwi_name = 'dir-AP_dwi' #'ep2d_diff_hardi_s2'
-dwipa_name = 'dir-PA_dwi' #'ep2d_diff_hardi_s2_pa'
+# Filter the subject_scan_list based on PA and AP presence
+filtered_subject_scan_list = []
+for sub_sc in subject_scan_list:
+    scan_dir = os.path.join(raw_dir, sub_sc[0], sub_sc[1], 'dwi')
+    files_in_scan = os.listdir(scan_dir) if os.path.exists(scan_dir) else []
+
+    # Check if the scan contains the required files
+    has_dwi = any(dwi_name in file for file in files_in_scan)
+    has_dwipa = any(dwipa_name in file for file in files_in_scan)
+
+    if has_dwi and has_dwipa:
+        filtered_subject_scan_list.append(sub_sc)
+subject_scan_list = filtered_subject_scan_list
 
 # Computational variables
 processing_type = 'MultiProc' # or 'Linear'
