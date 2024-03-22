@@ -108,9 +108,14 @@ def move_contents(src, dst):
         src_item = os.path.join(src, item)
         dst_item = os.path.join(dst, item)
 
-        # If the destination item exists and is a file, remove it before moving
-        if os.path.isfile(dst_item):
-            os.remove(dst_item)
+        # If the destination item exists
+        if os.path.exists(dst_item):
+            # If a file, remove it
+            if os.path.isfile(dst_item):
+                os.remove(dst_item)
+            # If a directory, remove it and its contents
+            elif os.path.isdir(dst_item):
+                shutil.rmtree(dst_item)
 
         # Move the item
         shutil.move(src_item, dst_item)
