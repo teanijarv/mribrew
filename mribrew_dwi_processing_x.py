@@ -1,3 +1,4 @@
+# %%
 import os
 from nipype import config, logging
 from nipype.interfaces import io, fsl, mrtrix3
@@ -284,3 +285,4 @@ workflow.connect([
 if __name__ == '__main__':
     workflow.write_graph(graph2use='orig')
     workflow.run(plugin=processing_type, plugin_args=plugin_args)
+# %%
