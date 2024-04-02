@@ -5,11 +5,36 @@ from nipype.interfaces.base import (
     CommandLineInputSpec,
     traits,
     TraitedSpec,
+    InputMultiPath,
     File,
     Directory,
     isdefined
 )
 from nipype.interfaces.mrtrix3.base import (MRTrix3Base, MRTrix3BaseInputSpec)
+
+class ResponseMeanInputSpec(CommandLineInputSpec):
+    in_txts = InputMultiPath(File(exists=True), mandatory=True, argstr='%s',
+                             sep=' ', desc='The input response functions')
+    out_txt = File(argstr='%s', position=-1,
+                   desc='The output mean response function')
+class ResponseMeanOutputSpec(TraitedSpec):
+    out_txt = File(exists=True, desc='The output mean response function')
+class ResponseMean(MRTrix3Base):
+    """Calculate the mean response function from a set of text files using `responsemean`."""
+
+    _cmd = 'responsemean'
+    input_spec = ResponseMeanInputSpec
+    output_spec = ResponseMeanOutputSpec
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+
+        if not isdefined(self.inputs.out_txt):
+            outputs['out_txt'] = op.abspath('out.txt')
+        else:
+            outputs['out_txt'] = op.abspath(self.inputs.out_txt)
+
+        return outputs
 
 class Generate5ttInputSpec(MRTrix3BaseInputSpec):
     algorithm = traits.Enum(
@@ -28,6 +53,11 @@ class Generate5ttInputSpec(MRTrix3BaseInputSpec):
         argstr="%s", mandatory=True, position=-2, desc="input image / directory"
     )
     out_file = File(argstr="%s", mandatory=True, position=-1, desc="output image")
+    nthreads = traits.Int(
+        argstr="-nthreads %d",
+        desc="number of threads. if zero, the number of available cpus will be used",
+        nohash=True,
+    )
 class Generate5ttOutputSpec(TraitedSpec):
     out_file = File(exists=True, desc="output image")
 class Generate5tt(MRTrix3Base):

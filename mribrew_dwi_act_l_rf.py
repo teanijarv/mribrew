@@ -1,11 +1,12 @@
 import os
+import pandas as pd
 from nipype import config, logging
 import nipype.interfaces.utility as niu
 import nipype.pipeline.engine as pe
 from nipype.interfaces import io, mrtrix3, fsl
 
 from mribrew.utils import (colours, split_subject_scan_list, create_subject_scan_container)
-from mribrew.act_interface import Generate5tt, SIFT, SIFT2
+from mribrew.act_interface import ResponseMean, Generate5tt, SIFT, SIFT2
 
 # ---------------------- Set up directory structures and constant variables ----------------------
 cwd = os.getcwd()
@@ -21,12 +22,17 @@ fs_default_file = os.path.join(misc_dir, 'fs_labels', 'fs_default.txt')
 
 # // TO-DO: read from CSV & potentially check for similar names (some have _1 or sth in the end)
 subject_list = next(os.walk(os.path.join(data_dir, 'proc', 'dwi_proc')))[1]
-# Generate a list of all (subject, scan) tuples
+subject_list_hc = pd.read_csv(os.path.join(misc_dir, 'hc_subjects.csv'), header=None)[0].tolist()
+
+# Generate a list of all [subject, scan] sublists and list of controls whose response function will be averaged
 subject_scan_list = []
+subject_scan_hc_list = []
 for sub in subject_list:
-    scans = next(os.walk(os.path.join(data_dir, 'proc', 'dwi_proc', sub)))[1] ## maybe error!
+    scans = next(os.walk(os.path.join(data_dir, 'proc', 'dwi_proc', sub)))[1]
     for scan in scans:
         subject_scan_list.append([sub, scan])
+        if sub in subject_list_hc:
+            subject_scan_hc_list.append([sub, scan])
 
 # Computational variables
 processing_type = 'MultiProc' # or 'Linear'
@@ -38,7 +44,7 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 
 # ACT parameters
-n_tracks = 1000000
+n_tracks = 10000000
 
 plugin_args = {
     'n_procs': n_cpus,
@@ -63,10 +69,41 @@ info = dict(
     dwi_mask_file=[['data', 'proc', 'dwi_proc', 'subject_id', 'scan_id', 'dwi', 'dwi_mask.nii.gz']],
     freesurfer_dir=[['data', 'proc', 'freesurfer', 'subject_id', 'scan_id']], 
     t1_file=[['data', 'proc', 'freesurfer', 'subject_id', 'scan_id', 'mri', 'T1.mgz']],
-    parc_file=[['data', 'proc', 'freesurfer', 'subject_id', 'scan_id', 'mri', 'aparc+aseg.mgz']],
+    parc_file=[['data', 'proc', 'freesurfer', 'subject_id', 'scan_id', 'mri', 'aparc+aseg.mgz']]
 )
 
-# Set up infosource node
+## RESPONSE FUNCTION WORKFLOW
+
+# Set up infosource node for response function wf
+infosource_rf = pe.Node(niu.IdentityInterface(fields=['subject_scan']), name='infosource_rf')
+infosource_rf.iterables = [('subject_scan', subject_scan_hc_list)]
+
+splitSubjectScanList_rf = pe.Node(niu.Function(input_names=['subject_scan'],
+                                      output_names=['subject_id', 'scan_id'],
+                                      function=split_subject_scan_list),
+                             name='splitSubjectScanList_rf')
+
+# Set up datasource node for response function wf
+datasource_rf = pe.Node(io.DataGrabber(infields=['subject_id', 'scan_id'], outfields=list(info.keys())),
+                                    name='datasource_rf')
+datasource_rf.inputs.base_directory = cwd
+datasource_rf.inputs.template = "%s/%s/%s/%s/%s/%s/%s"
+datasource_rf.inputs.field_template = {
+    'dwi_eddy_file': '%s/%s/%s/%s/%s/%s/%s',
+    'bvec_file': '%s/%s/%s/%s/%s/%s/%s',
+    'bval_file': '%s/%s/%s/%s/%s/%s/%s',
+    'dwi_mask_file': '%s/%s/%s/%s/%s/%s/%s',
+    'freesurfer_dir': '%s/%s/%s/%s/%s',
+    't1_file': '%s/%s/%s/%s/%s/%s/%s',
+    'parc_file': '%s/%s/%s/%s/%s/%s/%s'
+}
+datasource_rf.inputs.template_args = info
+datasource_rf.inputs.sort_filelist = True
+
+
+## ACT WORKFLOW
+
+# Set up infosource node for ACT for all subjects
 infosource = pe.Node(niu.IdentityInterface(fields=['subject_scan']), name='infosource')
 infosource.iterables = [('subject_scan', subject_scan_list)]
 infosource.inputs.fs_lut_file = fs_lut_file
@@ -77,7 +114,7 @@ splitSubjectScanList = pe.Node(niu.Function(input_names=['subject_scan'],
                                       function=split_subject_scan_list),
                              name='splitSubjectScanList')
 
-# Set up datasource node
+# Set up datasource node for ACT
 datasource = pe.Node(io.DataGrabber(infields=['subject_id', 'scan_id'], outfields=list(info.keys())),
                                     name='datasource')
 datasource.inputs.base_directory = cwd
@@ -89,6 +126,7 @@ datasource.inputs.field_template = {
     'dwi_mask_file': '%s/%s/%s/%s/%s/%s/%s',
     'freesurfer_dir': '%s/%s/%s/%s/%s',
     't1_file': '%s/%s/%s/%s/%s/%s/%s',
+    'parc_file': '%s/%s/%s/%s/%s/%s/%s'
 }
 datasource.inputs.template_args = info
 datasource.inputs.sort_filelist = True
@@ -115,6 +153,28 @@ response_sd.inputs.wm_file = 'wm.txt'
 response_sd.inputs.gm_file = 'gm.txt'
 response_sd.inputs.csf_file = 'csf.txt'
 
+# Join nodes for merging response functions
+join_wm_responses = pe.JoinNode(niu.IdentityInterface(fields=['wm_files']),
+                             joinsource='infosource_rf',
+                             joinfield='wm_files',
+                             name='join_wm_responses')
+join_gm_responses = pe.JoinNode(niu.IdentityInterface(fields=['gm_files']),
+                             joinsource='infosource_rf',
+                             joinfield='gm_files',
+                             name='join_gm_responses')
+join_csf_responses = pe.JoinNode(niu.IdentityInterface(fields=['csf_files']),
+                              joinsource='infosource_rf',
+                              joinfield='csf_files',
+                              name='join_csf_responses')
+
+# Average response function across subjects for each tissue type
+response_mean_wm = pe.Node(ResponseMean(), name='response_mean_wm')
+response_mean_wm.inputs.out_txt = 'avg_wm.txt'
+response_mean_gm = pe.Node(ResponseMean(), name='response_mean_gm')
+response_mean_gm.inputs.out_txt = 'avg_gm.txt'
+response_mean_csf = pe.Node(ResponseMean(), name='response_mean_csf')
+response_mean_csf.inputs.out_txt = 'avg_csf.txt'
+
 # Fiber orientation distribution estimation
 dwi2fod = pe.Node(mrtrix3.ConstrainedSphericalDeconvolution(), name='dwi2fod')
 dwi2fod.inputs.algorithm = 'msmt_csd'
@@ -131,6 +191,7 @@ mtn.inputs.out_file_csf = 'csffod_norm.mif'
 # 5-tissue-types image generation
 gen5tt = pe.Node(Generate5tt(), name='gen5tt')
 gen5tt.inputs.algorithm = 'hsvs'
+gen5tt.inputs.nthreads = 20
 gen5tt.inputs.out_file = '5tt_nocoreg.mif'
 
 # Extract b0 image
@@ -183,24 +244,14 @@ mrxform_parc.inputs.out_file = 'aparcaseg_label_coreg.mif'
 
 # Anatomically constrained tractography (ACT)
 tk = pe.Node(mrtrix3.Tractography(), name='tk')
-tk.inputs.args = '-nthreads 50'
+tk.inputs.args = '-nthreads 20'
 tk.inputs.backtrack = True
 tk.inputs.select = n_tracks
 tk.inputs.out_file = f'tracks_{n_tracks}.tck'
 
-# # Spherical-deconvolution informed filtering of tractograms (SIFT)
-# sift = pe.Node(SIFT(), name='sift')
-# sift.inputs.args = f'–term_number {int(n_tracks/10)} -nthreads 50'
-# sift.inputs.out_file = f'tracks_sift_{int(n_tracks/10)}.tck'
-
-# # Tractograms to structural connectomes
-# tck2conn = pe.Node(mrtrix3.BuildConnectome(), name='tck2conn')
-# tck2conn.inputs.args = '–symmetric –zero_diagonal -scale_invnodevol'
-# tck2conn.inputs.out_file = f'sc_sift_{int(n_tracks/10)}.csv'
-
 # SIFT2
 sift2 = pe.Node(SIFT2(), name='sift2')
-sift2.inputs.args = '-nthreads 50'
+sift2.inputs.args = '-nthreads 20'
 sift2.inputs.out_file = 'sift2_tck_weights.txt'
 
 # Tractograms to structural connectomes
@@ -212,15 +263,19 @@ tck2conn.inputs.out_file = f'sc_sift2_{int(n_tracks)}.csv'
 # ---------------------- CREATE WORKFLOW AND CONNECT NODES ----------------------
 print(colours.CGREEN + 'Connecting Nodes.\n' + colours.CEND)
 
-workflow = pe.Workflow(name='act_wf', base_dir=f"{wf_dir}")
+# Response function workflow
+workflow = pe.Workflow(name='act_wf2', base_dir=f"{wf_dir}")
 workflow.connect([
-# ---------------------- INPUT/OUTPUT STRUCTURE (Handling input/output directories)
-    
-    # # Linking subject's information to data source
-    # (infosource, datasource, [('subject_id', 'subject_id')]),
-    # # Setting the output directory structure based on the subject ID
-    # (infosource, datasink, [('subject_id',  'container')]),
+# ---------------------- INPUT/OUTPUT STRUCTURE (HC)
 
+    (infosource_rf, splitSubjectScanList_rf, [('subject_scan', 'subject_scan')]),
+
+    # Connect to datasource
+    (splitSubjectScanList_rf, datasource_rf, [('subject_id', 'subject_id')]),
+    (splitSubjectScanList_rf, datasource_rf, [('scan_id', 'scan_id')]),
+
+# ---------------------- INPUT/OUTPUT STRUCTURE (all subjects)
+    
     (infosource, splitSubjectScanList, [('subject_scan', 'subject_scan')]),
 
     # Connect to datasource
@@ -231,20 +286,33 @@ workflow.connect([
     (infosource, createSubjectScanContainer, [('subject_scan', 'subject_scan')]),
     (createSubjectScanContainer, datasink, [('container', 'container')]),
 
-# ---------------------- FIBER ORIENTATION DISTRIBUTION (FOD for WM, GM, CSF)
+# ---------------------- FIBER ORIENTATION DISTRIBUTION (HC average)
     
     # Estimate response functions for different tissue types
-    (datasource, response_sd, [('dwi_eddy_file', 'in_file'),
+    (datasource_rf, response_sd, [('dwi_eddy_file', 'in_file'),
                                ('bvec_file', 'in_bvec'),
                                ('bval_file', 'in_bval')]),
+    
+    (response_sd, join_wm_responses, [('wm_file', 'wm_files')]),
+    (response_sd, join_gm_responses, [('gm_file', 'gm_files')]),
+    (response_sd, join_csf_responses, [('csf_file', 'csf_files')]),
+
+    # Connect JoinNodes to ResponseMean nodes
+    (join_wm_responses, response_mean_wm, [('wm_files', 'in_txts')]),
+    (join_gm_responses, response_mean_gm, [('gm_files', 'in_txts')]),
+    (join_csf_responses, response_mean_csf, [('csf_files', 'in_txts')]),
+
+# ---------------------- FIBER ORIENTATION DISTRIBUTION (average used on all subjects)
+
     # Estimate the orientation of all fibers crossing every voxel
     (datasource, dwi2fod, [('dwi_eddy_file', 'in_file'),
                            ('dwi_mask_file', 'mask_file'),
                            ('bvec_file', 'in_bvec'),
                            ('bval_file', 'in_bval')]),
-    (response_sd, dwi2fod, [('wm_file', 'wm_txt'),
-                            ('gm_file', 'gm_txt'),
-                            ('csf_file', 'csf_txt')]),
+    (response_mean_wm, dwi2fod, [('out_txt', 'wm_txt')]),
+    (response_mean_gm, dwi2fod, [('out_txt', 'gm_txt')]),
+    (response_mean_csf, dwi2fod, [('out_txt', 'csf_txt')]),
+
     # Correct for global intensity differences
     (dwi2fod, mtn, [('wm_odf', 'wm_fod'),
                     ('gm_odf', 'gm_fod'),
@@ -291,26 +359,6 @@ workflow.connect([
     # (datasource, mrxform_parc, [('parc_file', 'in_files')]),
     (transconv, mrxform_parc, [('out_transform', 'linear_transform')]),
 
-# # ---------------------- ANATOMICALLY CONSTRAINED TRACTOGRAPHY (ACT) - SIFT
-
-#     # Perform ACT using 5TT image and determine seed points dynamically using WM FOD
-#     (mrxform_5tt, tk, [('out_file', 'act_file')]),
-#     (mtn, tk, [('out_file_wm', 'seed_dynamic')]),
-#     (mtn, tk, [('out_file_wm', 'in_file')]),
-#     # Spherical-deconvolution informed filtering of tractograms (SIFT)
-#     (mrxform_5tt, sift, [('out_file', 'act_file')]),
-#     (tk, sift, [('out_file', 'in_tracks')]),
-#     (mtn, sift, [('out_file_wm', 'in_fod')]),
-#     # Generate structural connectomes of SIFT tractograms
-#     (sift, tck2conn, [('out_tracks', 'in_file')]),
-#     (mrxform_parc, tck2conn, [('out_file', 'in_parc')]),
-
-# # ---------------------- DATASINK (save tractograms and structural connectomes)
-
-#     # Save the tractograms and structural connectomes
-#     (sift, datasink, [('out_tracks', '@tracks')]), 
-#     (tck2conn, datasink, [('out_file', '@sc')]), 
-
 # ---------------------- ANATOMICALLY CONSTRAINED TRACTOGRAPHY (ACT) - SIFT2
 
     # Perform ACT using 5TT image and determine seed points dynamically using WM FOD
@@ -329,10 +377,11 @@ workflow.connect([
 # ---------------------- DATASINK (save tractograms and structural connectomes)
 
     # Save the tractograms and structural connectomes
-    (tk, datasink, [('out_file', '@tracks')]), 
+    # (tk, datasink, [('out_file', '@tracks')]), 
     (tck2conn, datasink, [('out_file', '@sc')]), 
 ])
 
 if __name__ == '__main__':
+    # Run ACT workflow
     workflow.write_graph(graph2use='orig')
     workflow.run(plugin=processing_type, plugin_args=plugin_args)
