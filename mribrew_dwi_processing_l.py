@@ -51,8 +51,8 @@ subject_scan_list = filtered_subject_scan_list
 # Computational variables
 processing_type = 'MultiProc' # or 'Linear'
 cuda_processing = False
-total_memory = 6 # in GB
-n_cpus = 6 # number of nipype processes to run at the same time
+total_memory = 24 # in GB
+n_cpus = 24 # number of nipype processes to run at the same time
 os.environ['OMP_NUM_THREADS'] = str(n_cpus)
 os.environ["NUMEXPR_NUM_THREADS"] = str(n_cpus)
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -122,9 +122,11 @@ print(colours.CGREEN + "Creating Processing Nodes." + colours.CEND)
 
 # Using MRtrix3's DWIDenoise to reduce random noise
 mrtrixDenoise = pe.Node(mrtrix3.DWIDenoise(), name='mrtrixDenoise')
+mrtrixDenoise.inputs.nthreads = 3
 
 # Removing Gibbs ringing artifacts using MRtrix3's MRDeGibbs function
 mrtrixDegibbs = pe.Node(mrtrix3.MRDeGibbs(), name='mrtrixDegibbs')
+mrtrixDegibbs.inputs.nthreads = 3
 
 ### BRAIN MASK 1 (pre-topup/eddy)
 
