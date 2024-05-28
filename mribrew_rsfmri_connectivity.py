@@ -3,25 +3,25 @@ import pandas as pd
 from nipype import Function, config, logging
 import nipype.interfaces.utility as niu
 import nipype.pipeline.engine as pe
-from nipype.interfaces.io import DataSink, DataGrabber
+from nipype.interfaces import io
 
 from mribrew.utils import colours
-from mribrew.rsfmri_interface import (setup_atlases, extract_timeseries, 
-                                      compute_connectivity)
+from mribrew.rsfmri_interface import (extract_dk_sch_bold_timeseries, 
+                                      compute_fc)
 
 ### ------ FILE DIRS & COMPUTATION VARIABLES
 
 # Define constants and paths
 cwd = os.getcwd()
 data_dir = os.path.join(cwd, 'data')
-proc_dir = '/mnt/raid1/RSfMRI' # os.path.join(data_dir, 'proc')
+proc_dir = os.path.join(data_dir, 'proc') # '/mnt/raid1/RSfMRI'
 wf_dir = os.path.join(cwd, 'wf')
-res_dir = os.path.join(data_dir, 'res')
+res_dir = os.path.join(data_dir, 'res', 'fc')
 log_dir = os.path.join(wf_dir, 'log')
 
 # subject_list = next(os.walk(proc_dir))[1]
 all_subjects = next(os.walk(proc_dir))[1]
-subjects_of_interest = pd.read_csv(os.path.join(data_dir, 'temp_csv/subjects_for_fmri_analysis.csv'), header=None)[0].to_list()
+subjects_of_interest = all_subjects #pd.read_csv(os.path.join(data_dir, 'temp_csv/subjects_for_fmri_analysis.csv'), header=None)[0].to_list()
 
 subject_list = set(
     subject for subject in all_subjects
@@ -58,48 +58,38 @@ infosource = pe.Node(niu.IdentityInterface(fields=['subject_id']),
 infosource.iterables = [('subject_id', subject_list)]
 
 # Set up datasource node
-datasource = pe.Node(interface=DataGrabber(infields=['subject_id'],
+datasource = pe.Node(interface=io.DataGrabber(infields=['subject_id'],
                                            outfields=['rsfmri_file']),
                      name='datasource')
 datasource.inputs.base_directory = proc_dir
-# datasource.inputs.template = '%s/RSfMRI/processed_and_censored_32bit.nii.gz'
 datasource.inputs.template = '%s/processed_and_censored_32bit.nii.gz'
 datasource.inputs.sort_filelist = True
-
-# Set up a EBM ROIs setup node
-setup_atlases_node = pe.Node(Function(input_names=[],
-                                       output_names=['desikan_img', 
-                                                     'schaefer_img'],
-                                       function=setup_atlases),
-                              name="setup_atlases")
 
 # ---------------------- PROCESSING NODES ----------------------
 print(colours.CGREEN + "Creating Processing Nodes." + colours.CEND)
 
 # Set up a node for extracting time series data for each subject
-extract_timeseries_node = pe.Node(Function(input_names=['rsfmri_file', 
-                                                        'desikan_img', 
-                                                        'schaefer_img'],
-                                               output_names=['desikan_time_series', 
-                                                             'schaefer_time_series'],
-                                               function=extract_timeseries),
+extract_timeseries_node = pe.Node(Function(input_names=['rsfmri_file'],
+                                            output_names=['dk_timeseries', 
+                                                            'sch_timeseries'],
+                                            function=extract_dk_sch_bold_timeseries),
                                       name="extract_timeseries")
 
 # Set up a node for computing correlation matrices for each subject
-compute_connectivity_node = pe.Node(Function(input_names=['desikan_time_series',
-                                                     'schaefer_time_series'],
-                                            output_names=['sub_corrmat_desikan_file', 
-                                                        #   'sub_partial_corrmat_desikan_file', 
-                                                          'sub_corrmat_schaefer_file'],
-                                                        #   'sub_partial_corrmat_schaefer_file'],
-                                            function=compute_connectivity),
-                                    name="compute_connectivity")
+compute_fc_node = pe.Node(Function(input_names=['dk_timeseries',
+                                                'sch_timeseries'],
+                                            output_names=['dk_fc', 
+                                                          'sch_fc'],
+                                            function=compute_fc),
+                                    name="compute_fc")
 
 # ---------------------- OUTPUT NODES ----------------------
 print(colours.CGREEN + "Creating Output Nodes." + colours.CEND)
 
 # DataSink
-datasink = pe.Node(DataSink(base_directory=res_dir, container='connectivity'), name='datasink')
+# datasink = pe.Node(DataSink(base_directory=res_dir, container='connectivity'), name='datasink')
+datasink = pe.Node(io.DataSink(parameterization=False), name='datasink')
+datasink.inputs.base_directory = res_dir
 
 # ---------------------- CREATE WORKFLOW AND CONNECT NODES ----------------------
 print(colours.CGREEN + 'Connecting Nodes.\n' + colours.CEND)
@@ -108,25 +98,20 @@ print(colours.CGREEN + 'Connecting Nodes.\n' + colours.CEND)
 workflow = pe.Workflow(name='connectivity_wf', base_dir=wf_dir)
 workflow.connect([
     (infosource, datasource, [('subject_id', 'subject_id')]),
+    (infosource, datasink, [('subject_id',  'container')]),
 
     # Extract time series for all EBM ROIs
-    (setup_atlases_node, extract_timeseries_node, [('desikan_img', 'desikan_img')]),
-    (setup_atlases_node, extract_timeseries_node, [('schaefer_img', 'schaefer_img')]),
     (datasource, extract_timeseries_node, [('rsfmri_file', 'rsfmri_file')]),
 
     # Compute correlation matrices
-    (extract_timeseries_node, compute_connectivity_node, [('desikan_time_series', 'desikan_time_series')]),
-    (extract_timeseries_node, compute_connectivity_node, [('schaefer_time_series', 'schaefer_time_series')]),
+    (extract_timeseries_node, compute_fc_node, [('dk_timeseries', 'dk_timeseries')]),
+    (extract_timeseries_node, compute_fc_node, [('sch_timeseries', 'sch_timeseries')]),
     
     # Export all correlation matrices
-    (compute_connectivity_node, datasink, [('sub_corrmat_desikan_file', 
-                                            '@sub_corrmat_desikan_file')]),
-    # (compute_connectivity_node, datasink, [('sub_partial_corrmat_desikan_file', 
-    #                                         '@sub_partial_corrmat_desikan_file')]),
-    (compute_connectivity_node, datasink, [('sub_corrmat_schaefer_file', 
-                                            '@sub_corrmat_schaefer_file')]),
-    # (compute_connectivity_node, datasink, [('sub_partial_corrmat_schaefer_file', 
-    #                                         '@sub_partial_corrmat_schaefer_file')]),
+    (compute_fc_node, datasink, [('dk_fc', 
+                                '@dk_fc')]),
+    (compute_fc_node, datasink, [('sch_fc', 
+                                '@sch_fc')]),
 ])
 
 if __name__ == '__main__':

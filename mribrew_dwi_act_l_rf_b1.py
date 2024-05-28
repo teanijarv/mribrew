@@ -15,7 +15,7 @@ data_dir = os.path.join(cwd, 'data')
 #proc_dir = os.path.join(data_dir, 'proc')
 wf_dir = os.path.join(cwd, 'wf')
 res_dir = os.path.join(data_dir, 'res', 'act')
-log_dir = os.path.join(wf_dir, 'log')
+log_dir = os.path.join(wf_dir, 'log_b1')
 
 fs_lut_file = os.path.join(misc_dir, 'fs_labels', 'FreeSurferColorLUT.txt')
 fs_default_file = os.path.join(misc_dir, 'fs_labels', 'fs_default.txt')
@@ -39,12 +39,11 @@ for sub in subject_list:
 # Select all non-HC and select only one batch
 subject_scan_list = [[sub, scan] for [sub, scan] in subject_scan_list if sub not in sub_hc_temp]
 batch_len = len(subject_scan_list) // 3
-batch1 = subject_scan_list[0:2]
+batch1 = subject_scan_list[0:batch_len]
 batch2 = subject_scan_list[batch_len:2*batch_len]
 batch3 = subject_scan_list[2*batch_len:]
 subject_scan_list = batch1
 print(f'n subjects running: {len(subject_scan_list)}')
-print(subject_scan_list)
 
 # Computational variables
 processing_type = 'MultiProc' # or 'Linear'
@@ -268,7 +267,7 @@ sift2.inputs.out_file = 'sift2_tck_weights.txt'
 
 # Tractograms to structural connectomes
 tck2conn = pe.Node(mrtrix3.BuildConnectome(), name='tck2conn')
-tck2conn.inputs.args = '–symmetric –zero_diagonal -scale_invnodevol'
+tck2conn.inputs.args = '-symmetric -zero_diagonal -scale_invnodevol -out_assignment assignments.csv'
 tck2conn.inputs.out_file = f'sc_sift2_{int(n_tracks)}.csv'
 
 

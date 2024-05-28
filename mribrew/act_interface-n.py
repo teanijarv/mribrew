@@ -11,27 +11,8 @@ from nipype.interfaces.base import (
     Directory,
     isdefined
 )
+from nipype.interfaces.utils.filemanip import split_filename
 from nipype.interfaces.mrtrix3.base import (MRTrix3Base, MRTrix3BaseInputSpec)
-
-def split_filename(fname):
-    """Split a filename into parts: path, base filename and extension."""
-
-    special_extensions = [".nii.gz", ".tar.gz", ".niml.dset"]
-
-    pth = op.dirname(fname)
-    fname = op.basename(fname)
-
-    ext = None
-    for special_ext in special_extensions:
-        ext_len = len(special_ext)
-        if (len(fname) > ext_len) and (fname[-ext_len:].lower() == special_ext.lower()):
-            ext = fname[-ext_len:]
-            fname = fname[:-ext_len]
-            break
-    if not ext:
-        fname, ext = op.splitext(fname)
-
-    return pth, fname, ext
 
 class ResponseMeanInputSpec(CommandLineInputSpec):
     in_txts = InputMultiPath(File(exists=True), mandatory=True, argstr='%s',
@@ -293,7 +274,7 @@ class SIFT2(MRTrix3Base):
             outputs['out_weights'] = op.abspath(self.inputs.out_file)
 
         return outputs
-
+	
 class MTNormaliseInputSpec(MRTrix3BaseInputSpec):
     wm_fod = File(
         argstr="%s",

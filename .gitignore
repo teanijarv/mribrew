@@ -1,6 +1,7 @@
 .DS_Store
 /wf
 /data
+/data_dwi
 /data copy
 __pycache__
 *.ipynb

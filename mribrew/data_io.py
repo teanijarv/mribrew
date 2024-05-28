@@ -17,10 +17,10 @@ def read_dwi_data(data_file, mask_file, bvec_file, bval_file,
     return data, affine, gtab
 
 # Save matrices as pickle files
-def save_to_pickle(data, filename):
+def save_to_pickle(data, fname):
     import os
     import pickle
-    filepath = os.path.abspath(filename)
+    filepath = os.path.abspath(fname)
     with open(filepath, 'wb') as f:
         pickle.dump(data, f)
     return filepath
@@ -32,3 +32,11 @@ def read_pickle(filepath):
     with open(filepath, 'rb') as f:
         var = pickle.load(f)
     return var
+
+def save_csv(data, fname):
+    import numpy as np
+    return np.savetxt(fname, data, delimiter=",")
+
+def read_csv(filepath):
+    import pandas as pd
+    return pd.read_csv(filepath, header=None).to_numpy()

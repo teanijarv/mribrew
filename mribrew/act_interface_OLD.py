@@ -13,26 +13,6 @@ from nipype.interfaces.base import (
 )
 from nipype.interfaces.mrtrix3.base import (MRTrix3Base, MRTrix3BaseInputSpec)
 
-def split_filename(fname):
-    """Split a filename into parts: path, base filename and extension."""
-
-    special_extensions = [".nii.gz", ".tar.gz", ".niml.dset"]
-
-    pth = op.dirname(fname)
-    fname = op.basename(fname)
-
-    ext = None
-    for special_ext in special_extensions:
-        ext_len = len(special_ext)
-        if (len(fname) > ext_len) and (fname[-ext_len:].lower() == special_ext.lower()):
-            ext = fname[-ext_len:]
-            fname = fname[:-ext_len]
-            break
-    if not ext:
-        fname, ext = op.splitext(fname)
-
-    return pth, fname, ext
-
 class ResponseMeanInputSpec(CommandLineInputSpec):
     in_txts = InputMultiPath(File(exists=True), mandatory=True, argstr='%s',
                              sep=' ', desc='The input response functions')
@@ -56,101 +36,6 @@ class ResponseMean(MRTrix3Base):
             outputs['out_txt'] = op.abspath(self.inputs.out_txt)
 
         return outputs
-    
-
-class MRTransformInputSpec(MRTrix3BaseInputSpec):
-    in_files = InputMultiPath(
-        File(exists=True),
-        argstr="%s",
-        mandatory=True,
-        position=-2,
-        desc="Input images to be transformed",
-    )
-    out_file = File(
-        genfile=True,
-        argstr="%s",
-        position=-1,
-        desc="Output image",
-    )
-    invert = traits.Bool(
-        argstr="-inverse",
-        desc="Invert the specified transform before using it",
-    )
-    linear_transform = File(
-        exists=True,
-        argstr="-linear %s",
-        desc=(
-            "Specify a linear transform to apply, in the form of a 3x4 or 4x4 ascii file. "
-            "Note the standard reverse convention is used, "
-            "where the transform maps points in the template image to the moving image. "
-            "Note that the reverse convention is still assumed even if no -template image is supplied."
-        ),
-    )
-    replace_transform = traits.Bool(
-        argstr="-replace",
-        desc="replace the current transform by that specified, rather than applying it to the current transform",
-    )
-    transformation_file = File(
-        exists=True,
-        argstr="-transform %s",
-        desc="The transform to apply, in the form of a 4x4 ascii file.",
-    )
-    template_image = File(
-        exists=True,
-        argstr="-template %s",
-        desc="Reslice the input image to match the specified template image.",
-    )
-    reference_image = File(
-        exists=True,
-        argstr="-reference %s",
-        desc="in case the transform supplied maps from the input image onto a reference image, use this option to specify the reference. Note that this implicitly sets the -replace option.",
-    )
-    flip_x = traits.Bool(
-        argstr="-flipx",
-        desc="assume the transform is supplied assuming a coordinate system with the x-axis reversed relative to the MRtrix convention (i.e. x increases from right to left). This is required to handle transform matrices produced by FSL's FLIRT command. This is only used in conjunction with the -reference option.",
-    )
-    quiet = traits.Bool(
-        argstr="-quiet",
-        desc="Do not display information messages or progress status.",
-    )
-    debug = traits.Bool(argstr="-debug", desc="Display debugging messages.")
-class MRTransformOutputSpec(TraitedSpec):
-    out_file = File(exists=True, desc="the output image of the transformation")
-class MRTransform(MRTrix3Base):
-    """
-    Apply spatial transformations or reslice images
-
-    Example
-    -------
-
-    >>> MRxform = MRTransform()
-    >>> MRxform.inputs.in_files = 'anat_coreg.mif'
-    >>> MRxform.run()                                   # doctest: +SKIP
-    """
-
-    _cmd = "mrtransform"
-    input_spec = MRTransformInputSpec
-    output_spec = MRTransformOutputSpec
-
-    def _list_outputs(self):
-        outputs = self.output_spec().get()
-        outputs["out_file"] = self.inputs.out_file
-        if not isdefined(outputs["out_file"]):
-            outputs["out_file"] = op.abspath(self._gen_outfilename())
-        else:
-            outputs["out_file"] = op.abspath(outputs["out_file"])
-        return outputs
-
-    def _gen_filename(self, name):
-        if name == "out_file":
-            return self._gen_outfilename()
-        else:
-            return None
-
-    def _gen_outfilename(self):
-        _, name, _ = split_filename(self.inputs.in_files[0])
-        return name + "_MRTransform.mif"
-
 
 class Generate5ttInputSpec(MRTrix3BaseInputSpec):
     algorithm = traits.Enum(
