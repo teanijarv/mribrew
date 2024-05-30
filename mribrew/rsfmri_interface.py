@@ -26,16 +26,22 @@ def compute_fc(dk_timeseries, sch_timeseries):
     from nilearn.connectome import ConnectivityMeasure
     from mribrew.data_io import save_csv
 
-    fc_measure = ConnectivityMeasure(kind='correlation', standardize='zscore_sample')
-    dk_fc = fc_measure.fit_transform([dk_timeseries])[0]
-    sch_fc = fc_measure.fit_transform([sch_timeseries])[0]
+    fc = ConnectivityMeasure(kind='correlation', standardize='zscore_sample')
+    dk_fc = fc.fit_transform([dk_timeseries])[0]
+    sch_fc = fc.fit_transform([sch_timeseries])[0]
 
     # dk_fc = np.corrcoef(dk_timeseries.T)
     # sch_fc = np.corrcoef(sch_timeseries.T)
 
+    pfc = ConnectivityMeasure(kind='partial correlation', standardize='zscore_sample')
+    dk_pfc = pfc.fit_transform([dk_timeseries])[0]
+    sch_pfc = pfc.fit_transform([sch_timeseries])[0]
+
     files_dict = {
         "./dk_fc.csv": dk_fc,
         "./sch_fc.csv": sch_fc,
+        "./dk_pfc.csv": dk_pfc,
+        "./sch_pfc.csv": sch_pfc,
     }
 
     for fname, data in files_dict.items():

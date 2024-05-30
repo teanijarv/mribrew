@@ -71,7 +71,7 @@ print(colours.CGREEN + "Creating Processing Nodes." + colours.CEND)
 # Set up a node for extracting time series data for each subject
 extract_timeseries_node = pe.Node(Function(input_names=['rsfmri_file'],
                                             output_names=['dk_timeseries', 
-                                                            'sch_timeseries'],
+                                                          'sch_timeseries'],
                                             function=extract_dk_sch_bold_timeseries),
                                       name="extract_timeseries")
 
@@ -79,7 +79,9 @@ extract_timeseries_node = pe.Node(Function(input_names=['rsfmri_file'],
 compute_fc_node = pe.Node(Function(input_names=['dk_timeseries',
                                                 'sch_timeseries'],
                                             output_names=['dk_fc', 
-                                                          'sch_fc'],
+                                                          'sch_fc',
+                                                          'dk_pfc',
+                                                          'sch_pfc'],
                                             function=compute_fc),
                                     name="compute_fc")
 
@@ -112,6 +114,10 @@ workflow.connect([
                                 '@dk_fc')]),
     (compute_fc_node, datasink, [('sch_fc', 
                                 '@sch_fc')]),
+    (compute_fc_node, datasink, [('dk_pfc', 
+                                '@dk_pfc')]),
+    (compute_fc_node, datasink, [('sch_pfc', 
+                                '@sch_pfc')]),
 ])
 
 if __name__ == '__main__':

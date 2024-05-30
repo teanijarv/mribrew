@@ -3,5 +3,6 @@
 /data
 /data_dwi
 /data copy
+/figstemp
 __pycache__
 *.ipynb
