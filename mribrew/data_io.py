@@ -40,3 +40,9 @@ def save_csv(data, fname):
 def read_csv(filepath):
     import pandas as pd
     return pd.read_csv(filepath, header=None).to_numpy()
+
+def read_mat(filepath):
+    """Import data from a Matlab file."""
+    from scipy.io import loadmat
+    var = loadmat(filepath)
+    return list(var.values())[3]

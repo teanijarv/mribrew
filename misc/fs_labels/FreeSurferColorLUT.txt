@@ -1,3 +1,4 @@
+#$Id: FreeSurferColorLUT.txt,v 1.105 2015/07/29 18:23:03 greve Exp $
 
 #No. Label Name:                            R   G   B   A
 
@@ -10,8 +11,8 @@
 6   Left-Cerebellum-Exterior                0   148 0   0
 7   Left-Cerebellum-White-Matter            220 248 164 0
 8   Left-Cerebellum-Cortex                  230 148 34  0
-9   Left-Thalamus-unused                    0   118 14  0
-10  Left-Thalamus                           0   118 14  0
+9   Left-Thalamus                           0   118 14  0
+10  Left-Thalamus-Proper*                   0   118 14  0
 11  Left-Caudate                            122 186 220 0
 12  Left-Putamen                            236 13  176 0
 13  Left-Pallidum                           12  48  255 0
@@ -34,8 +35,8 @@
 30  Left-vessel                             160 32  240 0
 31  Left-choroid-plexus                     0   200 200 0
 32  Left-F3orb                              100 50  100 0
-33  Left-aOg                                122 135 50  0
-34  Left-WMCrowns                           123 135 50  0
+33  Left-lOg                                135 50  74  0
+34  Left-aOg                                122 135 50  0
 35  Left-mOg                                51  50  135 0
 36  Left-pOg                                74  155 60  0
 37  Left-Stellate                           120 62  43  0
@@ -49,8 +50,8 @@
 45  Right-Cerebellum-Exterior               0   148 0   0
 46  Right-Cerebellum-White-Matter           220 248 164 0
 47  Right-Cerebellum-Cortex                 230 148 34  0
-48  Right-Thalamus-unused                   0   118 14  0
-49  Right-Thalamus                          0   118 14  0
+48  Right-Thalamus                          0   118 14  0
+49  Right-Thalamus-Proper*                  0   118 14  0
 50  Right-Caudate                           122 186 220 0
 51  Right-Putamen                           236 13  176 0
 52  Right-Pallidum                          13  48  255 0
@@ -67,7 +68,7 @@
 63  Right-choroid-plexus                    0   200 221 0
 64  Right-F3orb                             100 50  100 0
 65  Right-lOg                               135 50  74  0
-66  Right-WMCrowns                          122 135 50  0
+66  Right-aOg                               122 135 50  0
 67  Right-mOg                               51  50  135 0
 68  Right-pOg                               74  155 60  0
 69  Right-Stellate                          120 62  43  0
@@ -77,9 +78,6 @@
 73  Left-Interior                           122 135 50  0
 74  Right-Interior                          122 135 50  0
 # 75/76 removed. duplicates of 4/43
-# new 75/76 added 
-75  Left-Locus-Coeruleus                    91  97  255 0
-76  Right-Locus-Coeruleus                   0   7   218 0  
 77  WM-hypointensities                      200 70  255 0
 78  Left-WM-hypointensities                 255 148 10  0
 79  Right-WM-hypointensities                255 148 10  0
@@ -89,17 +87,16 @@
 83  Left-F1                                 255 218 185 0
 84  Right-F1                                255 218 185 0
 85  Optic-Chiasm                            234 169 30  0
-192 Corpus_Callosum                         0   0   160 0
+192 Corpus_Callosum                         250 255 50  0
 
 86  Left_future_WMSA                        200 120  255 0
 87  Right_future_WMSA                       200 121  255 0
 88  future_WMSA                             200 122  255 0
 
+
 96  Left-Amygdala-Anterior                  205 10  125 0
 97  Right-Amygdala-Anterior                 205 10  125 0
 98  Dura                                    160 32  240 0
-
-99  Lesion                                  255 165 0   0
 
 100 Left-wm-intensity-abnormality           124 140 178 0
 101 Left-caudate-intensity-abnormality      125 140 178 0
@@ -132,7 +129,7 @@
 127 Soft-Tissue                             26  237 57  0
 128 Nerve                                   34  139 34  0
 129 Bone                                    30  144 255 0
-130 AirCavity                               196 160 128 0
+130 Air                                     147 19  173 0
 131 Orbital-Fat                             238 59  59  0
 132 Tongue                                  221 39  200 0
 133 Nasal-Structures                        238 174 238 0
@@ -193,8 +190,6 @@
 180 Left-Cortical-Dysplasia                 73  61  139 0
 181 Right-Cortical-Dysplasia                73  62  139 0
 182 CblumNodulus                            10 100  176 0
-183 Left-Vermis                            119 100  176 0
-184 Right-Vermis                           100 119  176 0
 
 #192 Corpus_Callosum  listed after #85 above
 193 Left-hippocampal_fissure                0   196 255 0
@@ -207,7 +202,7 @@
 200 Right-fimbria                           0   50  128 0
 201 alveus                                  255 204 153 0
 202 perforant_pathway                       255 128 128 0
-203 parasubiculum                           175 175 75  0
+203 parasubiculum                           255 255 0   0
 204 presubiculum                            64  0   64  0
 205 subiculum                               0   0   255 0
 206 CA1                                     255 0   0   0
@@ -231,30 +226,6 @@
 224 Background                              100 100 100 0
 225 Ectorhinal                              197 150 250 0
 226 HP_tail                                 170 170 255 0
-227 Polymorphic-Layer                       128 255 128 0
-228 Intracellular-Space                     204 153 204 0
-229 molecular_layer_DG                      168 0   0   0
-230 Prosubiculum                            252 132 8   0
-
-231 HP_body                                 0 255 0 0
-232 HP_head                                 255 0 0 0
-
-233  presubiculum-head                            32  0   32  0
-234  presubiculum-body                            64  0   64  0
-235  subiculum-head                               0   0   175 0
-236  subiculum-body                               0   0   255 0
-237  CA1-head                                     175 75   75   0
-238  CA1-body                                     255 0   0   0
-239  CA3-head                                      0   80 0   0
-240  CA3-body                                      0   128 0   0
-241  CA4-head                                     120 90 50 0
-242  CA4-body                                     196 160 128 0
-243  GC-ML-DG-head                               75   125 175 0
-244  GC-ML-DG-body                                32  200 255 0
-245  molecular_layer_HP-head                      100 25   25   0
-246  molecular_layer_HP-body                      128 0   0   0
-
-247 FreezeSurface                        10 100  100 0
 
 250 Fornix                                  255 0   0   0
 251 CC_Posterior                            0   0   64  0
@@ -268,23 +239,12 @@
 
 257 CSF-ExtraCerebral                      60  60  60  0
 258 Head-ExtraCerebral                    150 150 200  0
-259 Eye-Fluid                              60  60  60  0
+259 SkullApprox                           120 120 120  0
 260 BoneOrAir                             119 159 176 0
 261 PossibleFluid                         120  18 134 0
-262 Sinus                                 196 160 128 0
+262 Sinus                                 119 159 176 0
 263 Left-Eustachian                       119 159 176 0
 264 Right-Eustachian                      119 159 176 0
-265 Left-Eyeball                          60  60  60  0
-266 Right-Eyeball                         60  60  60  0
-
-270 ctx-lh-infragranular                  205 70  78  0
-271 ctx-lh-layer1                         210 80  78  0
-272 ctx-lh-layer2                         215 90  78  0
-273 ctx-lh-layer3                         220 100  78  0
-274 ctx-lh-layer4                         225 110  78  0
-275 ctx-lh-layer5                         230 120  78  0
-276 ctx-lh-layer6                         235 135  78  0
-277 ctx-lh-supragranular                  240 140  78  0
 
 # lymph node and vascular labels
 331 Aorta                                   255 0   0   0
@@ -316,15 +276,6 @@
 357 Right-Internal-PudendalV                170 10  200 0
 358 Pos-Lymph                               20  130 180 0
 359 Neg-Lymph                               20  180 130 0
-
-370 ctx-rh-infragranular                  205 70  130  0
-371 ctx-rh-layer1                         210 80  130  0
-372 ctx-rh-layer2                         215 90  130  0
-373 ctx-rh-layer3                         220 100  130  0
-374 ctx-rh-layer4                         225 110  130  0
-375 ctx-rh-layer5                         230 120  130  0
-376 ctx-rh-layer6                         235 135  130  0
-377 ctx-rh-supragranular                  240 140  130  0
 
 400 V1                                      206 62  78  0
 401 V2                                      121 18  134 0
@@ -474,34 +425,6 @@
 701 CSF-FSL-FAST                            120 18  134 0
 702 GrayMatter-FSL-FAST                     205 62  78  0
 703 WhiteMatter-FSL-FAST                    0   225 0   0
-
-801 L_hypothalamus_anterior_inferior        250 255 50  0
-802 L_hypothalamus_anterior_superior        80  200 255 0
-803 L_hypothalamus_posterior                255 160 0   0
-804 L_hypothalamus_tubular_inferior         255 160 200 0
-805 L_hypothalamus_tubular_superior         20  180 130 0
-806 R_hypothalamus_anterior_inferior        250 255 50  0
-807 R_hypothalamus_anterior_superior        80  200 255 0
-808 R_hypothalamus_posterior                255 160 0   0
-809 R_hypothalamus_tubular_inferior         255 160 200 0
-810 R_hypothalamus_tubular_superior         20  180 130 0
-
-# SAMSEG-CHARM + 400
-901       Air-Internal                     0 170 0 0 
-902       Artery                           204 0 0 255 
-906       EyeBalls                         230 189 66 255 
-907       Other-Tissues                    85 85 0 0
-908       Rectus-Muscles                   190 50 73 255
-909       Mucosa                           255 160 188 255 
-911       Skin                             85 85 85 0
-912       Charm-Spinal-Cord                  0 187 169 255 
-914       Vein                             0 84 255 255 
-915       Bone-Cortical                    0 85 0 0
-916       Bone-Cancellous                  190 156 120 255
-917       Charm-Background                 0 168 255 255 
-920       Cortical-CSF                     120 133 217 255 
-930       Optic-Nerve                      0 191 122 255 
-
 
 999 SUSPICIOUS                              255 100 100 0
 
@@ -668,29 +591,9 @@
 4034    wm-rh-transversetemporal            105 105 55  0
 4035    wm-rh-insula                        20  220 160 0
 
-# Below is the color table for a lobar parcellation obtained from running:
-# mri_annotation2label --subject subject --hemi lh --lobesStrict lobes
-# mri_annotation2label --subject subject --hemi rh --lobesStrict lobes
-# mri_aparc2aseg --s subject --rip-unknown --volmask \
-#   --o aparc.lobes.mgz --annot lobes \
-#   --base-offset 300 [--base-offset must be last arg]
 
-1301    ctx-lh-frontal-lobe                  25  100 40  0
-1303    ctx-lh-cingulate-lobe                100 25  0   0
-1304    ctx-lh-occipital-lobe                120 70  50  0
-1305    ctx-lh-temporal-lobe                 220 20  100 0
-1306    ctx-lh-parietal-lobe                 220 20  10  0
-1307    ctx-lh-insula-lobe                   255 192 32  0
-
-2301    ctx-rh-frontal-lobe                  25  100 40  0
-2303    ctx-rh-cingulate-lobe                100 25  0   0
-2304    ctx-rh-occipital-lobe                120 70  50  0
-2305    ctx-rh-temporal-lobe                 220 20  100 0
-2306    ctx-rh-parietal-lobe                 220 20  10  0
-2307    ctx-rh-insula-lobe                   255 192 32  0
-
-# Below is the color table for a lobar white matter parcellation
-#  obtained from running:
+# Below is the color table for a lobar white matter parcelation
+#  obtained from running
 # mri_annotation2label --subject subject --hemi lh --lobesStrict lobes
 # mri_annotation2label --subject subject --hemi rh --lobesStrict lobes
 # mri_aparc2aseg --s subject --labelwm --hypo-as-wm --rip-unknown \
@@ -699,14 +602,14 @@
 
 3201    wm-lh-frontal-lobe                  235 35  95  0
 3203    wm-lh-cingulate-lobe                35  75  35  0
-3204    wm-lh-occipital-lobe                135 155 195 0
+3204    wm-lh-occiptal-lobe                 135 155 195 0
 3205    wm-lh-temporal-lobe                 115 35  35  0
 3206    wm-lh-parietal-lobe                 35  195 35  0
 3207    wm-lh-insula-lobe                   20  220 160 0
 
 4201    wm-rh-frontal-lobe                  235 35  95  0
 4203    wm-rh-cingulate-lobe                35  75  35  0
-4204    wm-rh-occipital-lobe                135 155 195 0
+4204    wm-rh-occiptal-lobe                 135 155 195 0
 4205    wm-rh-temporal-lobe                 115 35  35  0
 4206    wm-rh-parietal-lobe                 35  195 35  0
 4207    wm-rh-insula-lobe                   20  220 160 0
@@ -1088,71 +991,44 @@
 #
 5100   fmajor                                           204 102 102 0
 5101   fminor                                           204 102 102 0
-5102   cc.body                                          204 102 102 0
-5103   cc.bodyc                                         255 153 153 0
-5104   cc.bodypf                                        255 153 153 0
-5105   cc.bodypm                                        255 204 204 0
-5106   cc.bodyp                                         255 102 102 0
-5107   cc.bodyt                                         255 204 204 0
-5108   cc.genu                                          255 102 102 0
-5109   cc.rostrum                                       204 51  51  0
-5110   cc.splenium                                      204 51  51  0
-5111   acomm                                            204 102 102 0
-5112   mcp                                              102 51  153 0
 #
-5200   lh.atr                                           255 255 102 0
-5201   lh.cab                                           153 204 0   0
-5202   lh.ccg                                           0   153 153 0
-5203   lh.cst                                           204 153 255 0
-5204   lh.ilf                                           255 153 51  0
-5205   lh.slfp                                          204 204 204 0
-5206   lh.slft                                          153 255 255 0
-5207   lh.unc                                           102 153 255 0
-5208   lh.cb                                            0   153 153 0
-5209   lh.slf                                           204 204 204 0
-5210   lh.af                                            153 255 255 0
-5211   lh.ifof                                          51  153 51  0
-5212   lh.fx                                            255 153 204 0
-5213   lh.fat                                           204 51  102 0
-5214   lh.or                                            153 102 255 0
-5215   lh.mlf                                           255 255 204 0
-5216   lh.slf1                                          51  204 255 0
-5217   lh.slf2                                          51  255 204 0
-5218   lh.slf3                                          204 204 204 0
-5219   lh.afd                                           153 255 255 0
-5220   lh.afv                                           153 255 255 0
-5221   lh.ar                                            153 0   204 0
-5222   lh.cbd                                           0   153 153 0
-5223   lh.cbv                                           153 204 0   0
-5224   lh.emc                                           51  153 51  0
-5225   lh.uf                                            102 153 255 0
+5102   lh.atr                                           255 255 102 0
+5103   lh.cab                                           153 204 0   0
+5104   lh.ccg                                           0   153 153 0
+5105   lh.cst                                           204 153 255 0
+5106   lh.ilf                                           255 153 51  0
+5107   lh.slfp                                          204 204 204 0
+5108   lh.slft                                          153 255 255 0
+5109   lh.unc                                           102 153 255 0
 #
-5300   rh.atr                                           255 255 102 0
-5301   rh.cab                                           153 204 0   0
-5302   rh.ccg                                           0   153 153 0
-5303   rh.cst                                           204 153 255 0
-5304   rh.ilf                                           255 153 51  0
-5305   rh.slfp                                          204 204 204 0
-5306   rh.slft                                          153 255 255 0
-5307   rh.unc                                           102 153 255 0
-5308   rh.cb                                            0   153 153 0
-5309   rh.slf                                           204 204 204 0
-5310   rh.af                                            153 255 255 0
-5311   rh.ifof                                          51  153 51  0
-5312   rh.fx                                            255 153 204 0
-5313   rh.fat                                           204 51  102 0
-5314   rh.or                                            153 102 255 0
-5315   rh.mlf                                           255 255 204 0
-5316   rh.slf1                                          51  204 255 0
-5317   rh.slf2                                          51  255 204 0
-5318   rh.slf3                                          204 204 204 0
-5319   rh.afd                                           153 255 255 0
-5320   rh.afv                                           153 255 255 0
-5321   rh.ar                                            153 0   204 0
-5322   rh.cbd                                           0   153 153 0
-5323   rh.cbv                                           153 204 0   0
-5324   rh.emc                                           51  153 51  0
-5325   rh.uf                                            102 153 255 0
+5110   rh.atr                                           255 255 102 0
+5111   rh.cab                                           153 204 0   0
+5112   rh.ccg                                           0   153 153 0
+5113   rh.cst                                           204 153 255 0
+5114   rh.ilf                                           255 153 51  0
+5115   rh.slfp                                          204 204 204 0
+5116   rh.slft                                          153 255 255 0
+5117   rh.unc                                           102 153 255 0
+
+# These are the same tracula labels as above in human-readable form
+5200   CC-ForcepsMajor                                  204 102 102 0
+5201   CC-ForcepsMinor                                  204 102 102 0
+5202   LAntThalRadiation                                255 255 102 0
+5203   LCingulumAngBundle                               153 204 0   0
+5204   LCingulumCingGyrus                               0   153 153 0
+5205   LCorticospinalTract                              204 153 255 0
+5206   LInfLongFas                                      255 153 51  0
+5207   LSupLongFasParietal                              204 204 204 0
+5208   LSupLongFasTemporal                              153 255 255 0
+5209   LUncinateFas                                     102 153 255 0
+5210   RAntThalRadiation                                255 255 102 0
+5211   RCingulumAngBundle                               153 204 0   0
+5212   RCingulumCingGyrus                               0   153 153 0
+5213   RCorticospinalTract                              204 153 255 0
+5214   RInfLongFas                                      255 153 51  0
+5215   RSupLongFasParietal                              204 204 204 0
+5216   RSupLongFasTemporal                              153 255 255 0
+5217   RUncinateFas                                     102 153 255 0
 
 ########################################
 
@@ -1199,27 +1075,6 @@
 7100  Brainstem-inferior-colliculus                     42  201 168 0
 7101  Brainstem-cochlear-nucleus                        168 104 162 0
 
-7201  DR                                                121 255 250 0
-7202  MnR                                               0   255 0   0
-7203  PAG                                               153 153 255 0
-7204  VTA                                               255 0   255 0
-
-# replaced by 75
-#7301  Left-LC                                          0   0   255 0
-7302  Left-LDTg                                         255 127 0   0
-7303  Left-mRt                                          255 0   0   0
-7304  Left-PBC                                          255 255 0   0
-7305  Left-PnO                                          0   127 255 0
-7306  Left-PTg                                          127 0   255 0
-
-# replaced by 76
-#7401  Right-LC                                         0   0   255 0
-7402  Right-LDTg                                        255 127 0   0
-7403  Right-mRt                                         255 0   0   0
-7404  Right-PBC                                         255 255 0   0
-7405  Right-PnO                                         0   127 255 0
-7406  Right-PTg                                         127 0   255 0
-
 8001  Thalamus-Anterior                                 74  130 181 0
 8002  Thalamus-Ventral-anterior                         242 241 240 0
 8003  Thalamus-Lateral-dorsal                           206 65  78  0
@@ -1234,72 +1089,6 @@
 8012  Thalamus-pulvinar                                 12  46  250 0
 8013  Thalamus-lateral-geniculate                       203 182 143 0
 8014  Thalamus-medial-geniculate                        42  204 167 0
-
-
-
-#
-# Labels for thalamus parcellation using histological atlas (Iglesias et al.)
-#
-
-8103 Left-AV 0 85 0 0
-8104 Left-CeM 170 85 0 0
-8105 Left-CL 0 170 0 0
-8106 Left-CM 170 170 0 0
-8108 Left-LD 170 255 0 0
-8109 Left-LGN 0 0 127 0
-8110 Left-LP 0 85 127 0
-8111 Left-L-Sg 170 85 127 0
-8112 Left-MDl 0 170 127 0
-8113 Left-MDm 170 170 127 0
-8115 Left-MGN 170 255 127 0
-8116 Left-MV(Re) 0 0 255 0
-8117 Left-Pc 170 0 255 0
-8118 Left-Pf 0 85 255 0
-8119 Left-Pt 170 85 255 0
-8120 Left-PuA 0 170 255 0
-8121 Left-PuI 170 170 255 0
-8122 Left-PuL 0 255 255 0
-8123 Left-PuM 170 255 255 0
-8125 Left-R 255 0 0 0
-8126 Left-VA 85 85 0 0
-8127 Left-VAmc 255 85 0 0
-8128 Left-VLa 85 170 0 0
-8129 Left-VLp 255 170 0 0
-8130 Left-VM 85 255 0 0
-8133 Left-VPL 255 0 255 0
-8134 Left-PaV 120 18  134 0
-8135 Left-PuMm 170 255 255 0
-8136 Left-PuMl 140  240 255 0
-
-8203 Right-AV 0 85 0 0
-8204 Right-CeM 170 85 0 0
-8205 Right-CL 0 170 0 0
-8206 Right-CM 170 170 0 0
-8208 Right-LD 170 255 0 0
-8209 Right-LGN 0 0 127 0
-8210 Right-LP 0 85 127 0
-8211 Right-L-Sg 170 85 127 0
-8212 Right-MDl 0 170 127 0
-8213 Right-MDm 170 170 127 0
-8215 Right-MGN 170 255 127 0
-8216 Right-MV(Re) 0 0 255 0
-8217 Right-Pc 170 0 255 0
-8218 Right-Pf 0 85 255 0
-8219 Right-Pt 170 85 255 0
-8220 Right-PuA 0 170 255 0
-8221 Right-PuI 170 170 255 0
-8222 Right-PuL 0 255 255 0
-8223 Right-PuM 170 255 255 0
-8225 Right-R 255 0 0 0
-8226 Right-VA 85 85 0 0
-8227 Right-VAmc 255 85 0 0
-8228 Right-VLa 85 170 0 0
-8229 Right-VLp 255 170 0 0
-8230 Right-VM 85 255 0 0
-8233 Right-VPL 255 0 255 0
-8234 Right-PaV 120 18  134 0
-8235 Right-PuMm 170 255 255 0
-8236 Right-PuMl 140  240 255 0
 
 #
 # Labels for thalamus parcellation using probabilistic tractography. See:
@@ -1412,7 +1201,6 @@
 11173  ctx_lh_S_temporal_inf                   21 180 180   0
 11174  ctx_lh_S_temporal_sup                  223 220  60   0
 11175  ctx_lh_S_temporal_transverse           221  60  60   0
-11300  ctx_lh_high_myelin                      60 162  60   0
 
 12100  ctx_rh_Unknown                           0   0   0   0
 12101  ctx_rh_G_and_S_frontomargin             23 220  60   0
@@ -1490,7 +1278,6 @@
 12173  ctx_rh_S_temporal_inf                   21 180 180   0
 12174  ctx_rh_S_temporal_sup                  223 220  60   0
 12175  ctx_rh_S_temporal_transverse           221  60  60   0
-12300  ctx_rh_high_myelin                     60  200  60   0
 
 #No.   Label Name:                              R   G   B   A
 13100  wm_lh_Unknown                            0   0   0   0
@@ -1646,4 +1433,3 @@
 14173  wm_rh_S_temporal_inf                    21 180 180   0
 14174  wm_rh_S_temporal_sup                   223 220  60   0
 14175  wm_rh_S_temporal_transverse            221  60  60   0
-
