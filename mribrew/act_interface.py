@@ -373,3 +373,162 @@ class MTNormalise(CommandLine):
         outputs["out_file_gm"] = op.abspath(self.inputs.out_file_gm)
         outputs["out_file_csf"] = op.abspath(self.inputs.out_file_csf)
         return outputs
+
+# new
+
+class BuildConnectomeInputSpec(CommandLineInputSpec):
+    in_file = File(
+        exists=True, argstr="%s", mandatory=True, position=-3, desc="input tractography"
+    )
+    in_parc = File(exists=True, argstr="%s", position=-2, desc="parcellation file")
+    out_file = File(
+        "connectome.csv",
+        argstr="%s",
+        mandatory=True,
+        position=-1,
+        usedefault=True,
+        desc="output file after processing",
+    )
+
+    out_assignments = File( # new addition
+        "assignments.txt",
+        argstr="-out_assignments %s",
+        mandatory=False,
+        usedefault=True,
+        desc="output the node assignments of each streamline to a file",
+    )
+
+    nthreads = traits.Int(
+        argstr="-nthreads %d",
+        desc="number of threads. if zero, the number of available cpus will be used",
+        nohash=True,
+    )
+
+    vox_lookup = traits.Bool(
+        argstr="-assignment_voxel_lookup",
+        desc="use a simple voxel lookup value at each streamline endpoint",
+    )
+    search_radius = traits.Float(
+        argstr="-assignment_radial_search %f",
+        desc="perform a radial search from each streamline endpoint to locate "
+        "the nearest node. Argument is the maximum radius in mm; if no node is"
+        " found within this radius, the streamline endpoint is not assigned to"
+        " any node.",
+    )
+    search_reverse = traits.Float(
+        argstr="-assignment_reverse_search %f",
+        desc="traverse from each streamline endpoint inwards along the "
+        "streamline, in search of the last node traversed by the streamline. "
+        "Argument is the maximum traversal length in mm (set to 0 to allow "
+        "search to continue to the streamline midpoint).",
+    )
+    search_forward = traits.Float(
+        argstr="-assignment_forward_search %f",
+        desc="project the streamline forwards from the endpoint in search of a"
+        "parcellation node voxel. Argument is the maximum traversal length in "
+        "mm.",
+    )
+
+    metric = traits.Enum(
+        "count",
+        "meanlength",
+        "invlength",
+        "invnodevolume",
+        "mean_scalar",
+        "invlength_invnodevolume",
+        argstr="-metric %s",
+        desc="specify the edge weight metric",
+    )
+
+    in_scalar = File(
+        exists=True,
+        argstr="-image %s",
+        desc="provide the associated image for the mean_scalar metric",
+    )
+
+    scale_file = File( # new
+        exists=True,
+        argstr="-scale_file %s",
+        desc="scale each contribution to the connectome edge according to the values in a vector file",
+    )
+
+    in_weights = File(
+        exists=True,
+        argstr="-tck_weights_in %s",
+        desc="specify a text scalar file containing the streamline weights",
+    )
+
+    keep_unassigned = traits.Bool(
+        argstr="-keep_unassigned",
+        desc="By default, the program discards the"
+        " information regarding those streamlines that are not successfully "
+        "assigned to a node pair. Set this option to keep these values (will "
+        "be the first row/column in the output matrix)",
+    )
+    zero_diagonal = traits.Bool(
+        argstr="-zero_diagonal",
+        desc="set all diagonal entries in the matrix "
+        "to zero (these represent streamlines that connect to the same node at"
+        " both ends)",
+    )
+
+
+class BuildConnectomeOutputSpec(TraitedSpec):
+    out_file = File(exists=True, desc="the output response file")
+    out_assignments = File(exists=True, desc="the output assignments file")
+
+
+class BuildConnectome(MRTrix3Base):
+    """
+    Generate a connectome matrix from a streamlines file and a node
+    parcellation image
+
+    Example
+    -------
+
+    >>> import nipype.interfaces.mrtrix3 as mrt
+    >>> mat = mrt.BuildConnectome()
+    >>> mat.inputs.in_file = 'tracks.tck'
+    >>> mat.inputs.in_parc = 'aparc+aseg.nii'
+    >>> mat.cmdline                               # doctest: +ELLIPSIS
+    'tck2connectome tracks.tck aparc+aseg.nii connectome.csv'
+    >>> mat.run()                                 # doctest: +SKIP
+    """
+
+    _cmd = "tck2connectome"
+    input_spec = BuildConnectomeInputSpec
+    output_spec = BuildConnectomeOutputSpec
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs["out_file"] = op.abspath(self.inputs.out_file)
+        outputs["out_assignments"] = op.abspath(self.inputs.out_assignments)
+        return outputs
+
+class TckSampleInputSpec(CommandLineInputSpec):
+    in_tracks = File(exists=True, mandatory=True, argstr='%s',
+                     position=-3, desc='Input track file in TCK format')
+    in_img = File(exists=True, mandatory=True, argstr='%s', position=-2,
+                  desc='Input image to be sampled in MIF format')
+    out_samples = File(argstr='%s', position=-1,
+                    desc='Output sampled tractogram')
+class TckSampleOutputSpec(TraitedSpec):
+    out_samples = File(
+        exists=True, desc='Output sampled tractogram')
+class TckSample(MRTrix3Base):
+    """Sample values of an associated image along tracks using `tcksample`.
+    """
+
+    _cmd = 'tcksample'
+    input_spec = TckSampleInputSpec
+    output_spec = TckSampleOutputSpec
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+
+        if not isdefined(self.inputs.out_samples):
+            outputs['out_samples'] = op.abspath('tck_samples.txt')
+        else:
+            outputs['out_samples'] = op.abspath(self.inputs.out_samples)
+
+        return outputs
