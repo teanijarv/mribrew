@@ -14,7 +14,7 @@ from mribrew.rsfmri_interface import (extract_dk_sch_bold_timeseries,
 # Define constants and paths
 cwd = os.getcwd()
 data_dir = os.path.join(cwd, 'data')
-proc_dir = os.path.join(data_dir, 'proc') # '/mnt/raid1/RSfMRI'
+proc_dir = '/mnt/raid1/RSfMRI'
 wf_dir = os.path.join(cwd, 'wf')
 res_dir = os.path.join(data_dir, 'res', 'fc')
 log_dir = os.path.join(wf_dir, 'log')
@@ -30,8 +30,8 @@ subject_list = set(
 
 # Computational variables
 processing_type = 'MultiProc' # or 'Linear'
-total_memory = 32 # in GB
-n_cpus = 32 # number of nipype processes to run at the same time
+total_memory = 96 # in GB
+n_cpus = 96 # number of nipype processes to run at the same time
 os.environ['OMP_NUM_THREADS'] = str(n_cpus)
 os.environ["NUMEXPR_NUM_THREADS"] = str(n_cpus)
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -78,7 +78,9 @@ extract_timeseries_node = pe.Node(Function(input_names=['rsfmri_file'],
 # Set up a node for computing correlation matrices for each subject
 compute_fc_node = pe.Node(Function(input_names=['dk_timeseries',
                                                 'sch_timeseries'],
-                                            output_names=['dk_fc', 
+                                            output_names=['dk_timeseries', 
+                                                          'sch_timeseries',
+                                                          'dk_fc', 
                                                           'sch_fc',
                                                           'dk_pfc',
                                                           'sch_pfc'],
@@ -97,7 +99,7 @@ datasink.inputs.base_directory = res_dir
 print(colours.CGREEN + 'Connecting Nodes.\n' + colours.CEND)
 
 # Workflow setup
-workflow = pe.Workflow(name='connectivity_wf', base_dir=wf_dir)
+workflow = pe.Workflow(name='rsfc_wf', base_dir=wf_dir)
 workflow.connect([
     (infosource, datasource, [('subject_id', 'subject_id')]),
     (infosource, datasink, [('subject_id',  'container')]),
@@ -108,12 +110,20 @@ workflow.connect([
     # Compute correlation matrices
     (extract_timeseries_node, compute_fc_node, [('dk_timeseries', 'dk_timeseries')]),
     (extract_timeseries_node, compute_fc_node, [('sch_timeseries', 'sch_timeseries')]),
+
+    # Export time series
+    (compute_fc_node, datasink, [('dk_timeseries', 
+                                          '@dk_timeseries')]),
+    (compute_fc_node, datasink, [('sch_timeseries', 
+                                          '@sch_timeseries')]),
     
-    # Export all correlation matrices
+    # Export full correlation matrices
     (compute_fc_node, datasink, [('dk_fc', 
                                 '@dk_fc')]),
     (compute_fc_node, datasink, [('sch_fc', 
                                 '@sch_fc')]),
+    
+    # Export partial correlation matrices
     (compute_fc_node, datasink, [('dk_pfc', 
                                 '@dk_pfc')]),
     (compute_fc_node, datasink, [('sch_pfc', 

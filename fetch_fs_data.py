@@ -5,10 +5,10 @@ from mribrew.utils import colours
 
 # Define paths
 cwd = os.getcwd()
-dwi_proc_path = os.path.join(cwd, 'data', 'proc', 'dwi_proc')
+dwi_proc_path = os.path.join(cwd, 'data', 'newproc', 'dwi_proc')
 fs_l_path = '/home/toomas/fs/l'
 fs_x_path = '/home/toomas/fs/x'
-output_path = os.path.join(cwd, 'data', 'proc', 'freesurfer')
+output_path = os.path.join(cwd, 'data', 'newproc', 'freesurfer')
 
 ignore_dirs = ['.DS_Store']
 
