@@ -38,6 +38,8 @@ def compute_fc(dk_timeseries, sch_timeseries):
     sch_pfc = pfc.fit_transform([sch_timeseries])[0]
 
     files_dict = {
+        "./dk_ts.csv": dk_timeseries,
+        "./sch_ts.csv": sch_timeseries,
         "./dk_fc.csv": dk_fc,
         "./sch_fc.csv": sch_fc,
         "./dk_pfc.csv": dk_pfc,
