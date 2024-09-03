@@ -31,7 +31,7 @@ for sub in subject_list:
     for scan in scans:
         subject_scan_list.append([sub, scan])
 
-subject_scan_list = [subject_scan_list[0], subject_scan_list[1]]
+# subject_scan_list = [subject_scan_list[0], subject_scan_list[1]]
 
 print(f'n subjects running: {len(subject_scan_list)}')
 print(subject_scan_list)
