@@ -7,7 +7,8 @@ import nipype.pipeline.engine as pe
 from nipype.interfaces import io, mrtrix, mrtrix3
 
 from mribrew.utils import (colours, split_subject_scan_list, create_subject_scan_container)
-from mribrew.tractseg_interface import (RawTractSeg)
+from mribrew.tractseg_interface import (RawTractSeg, TractMetrics, QCgetBrainMaskVol,
+                                        QC_MD, QC_wm_vol, sessionSummaryCSV, cohortSummaryCSV)
 
 # ---------------------- Set up directory structures and constant variables ----------------------
 cwd = os.getcwd()
@@ -30,7 +31,7 @@ for sub in subject_list:
     for scan in scans:
         subject_scan_list.append([sub, scan])
 
-subject_scan_list = [subject_scan_list[0]]
+subject_scan_list = [subject_scan_list[0], subject_scan_list[1]]
 
 print(f'n subjects running: {len(subject_scan_list)}')
 print(subject_scan_list)
@@ -40,7 +41,7 @@ print(subject_scan_list)
 # Computational variables
 processing_type = 'MultiProc' # or 'Linear'
 plugin_args = {
-    'n_procs': 1,
+    'n_procs': 8,
     'raise_insufficient': True,
 }
 
@@ -98,25 +99,71 @@ datasink.inputs.base_directory = res_dir
 # ---------------------- PROCESSING NODES ----------------------
 print(colours.CGREEN + "Creating Processing Nodes." + colours.CEND)
 
+# convert NII with grad vals/vecs to mif format
+nii2mif = pe.Node(mrtrix3.MRConvert(), name='nii2mif')
+nii2mif.inputs.out_file = 'dwi.mif'
 
-# Tractseg with standard tract definitions
+# exclude b2500 shell (not well-suited for DTI)
+dwiextract2 = pe.Node(mrtrix3.DWIExtract(), name='dwiextract2')
+dwiextract2.inputs.shell = [0, 100, 1000]
+dwiextract2.inputs.out_file = 'dwi_no_b2500.mif'
+
+# convert dwi to tensor image
+dwi2tensor = pe.Node(mrtrix.DWI2Tensor(), name='dwi2tensor')
+
+# calculate dti metrics
+tensor2metrics = pe.Node(mrtrix3.TensorMetrics(), name='tensor2metrics')
+tensor2metrics.inputs.out_adc = 'md.nii.gz'
+tensor2metrics.inputs.out_fa = 'fa.nii.gz'
+tensor2metrics.inputs.out_ad = 'ad.nii.gz'
+tensor2metrics.inputs.out_rd = 'rd.nii.gz'
+
+# tractseg
+# standard definitions
 tractSeg = pe.Node(RawTractSeg(), name='tractSeg')
-tractSeg.inputs.args = '--raw_diffusion_input --single_output_file'
-
-# Tractseg segmentation with Xtract tract definitions 
+tractSeg.inputs.args = '--raw_diffusion_input --single_output_file --csd_type csd_msmt'
+tractSeg.inputs.tract_definition = 'TractQuerier+'
+# xtract definitions 
 tractSegXtract = pe.Node(RawTractSeg(), name='tractSegXtract')
-tractSegXtract.inputs.args = '--raw_diffusion_input --single_output_file  --tract_definition xtract'
+tractSegXtract.inputs.args = '--raw_diffusion_input --single_output_file --csd_type csd_msmt'
+tractSegXtract.inputs.tract_definition = 'xtract'
 
-# # Fit DKI model
-# dkifit = pe.Node(DKIfit(), name='dkifit')
+# estimate DTI metrics in the WM tracts
+# standard definitions
+tractMetrics = pe.Node(TractMetrics(), name='tractMetrics')
+tractMetrics.inputs.thresh1 = 1.2e-3 # lower thresh for MD in WM lesion
+tractMetrics.inputs.thresh2 = 2.5e-3 # higher thresh for MD in WM lesion
+# xtract definitions
+tractMetricsXtract = tractMetrics.clone(name='tractMetricsXtract')
 
-# # Estimate DKI metrics in the WM tracts
-# # Standard definitions
-# tractMetrics = pe.Node(TractMetrics(), name='tractMetrics')
-# tractMetrics.inputs.thresh1 = 1.2e-3 # lower thresh for MD in WM lesion
-# tractMetrics.inputs.thresh2 = 2.5e-3 # higher thresh for MD in WM lesion
-# # Xtract definitions
-# tractMetricsXtract = tractMetrics.clone(name='tractMetricsXtract')
+# ---------------------- QC NODES ----------------------
+# mask volume check
+QC_mask = pe.Node(QCgetBrainMaskVol(), name='QC_mask')
+
+# MD % HIGHER THAN 2.5 check
+QC_MD = pe.Node(QC_MD(), name='QC_MD')
+QC_MD.inputs.in_thres = 2.5e-3
+
+# WM volume check
+QC_wm_vol = pe.Node(QC_wm_vol(), name='QC_wm_vol')
+
+# ---------------------- SUMMARY NODES ----------------------
+# session summary
+# standard definitions
+sessionSummary = pe.Node(sessionSummaryCSV(), name='sessionSummary') 
+sessionSummary.inputs.out_filename = 'tractseg_summary.csv'
+# xtract definitions
+sessionSummaryXtract = pe.Node(sessionSummaryCSV(), name = 'sessionSummaryXtract') 
+sessionSummaryXtract.inputs.out_filename = 'tractseg_summary_xtract.csv'
+
+# cohort summary   
+# standard definitions 
+cohortSummary = pe.Node(cohortSummaryCSV(), name = 'cohortSummary')
+cohortSummary.inputs.in_csv_c = os.path.join(res_dir, 'tractseg_cohort_summary.csv')
+# xtract definitions
+cohortSummaryXtract = pe.Node(cohortSummaryCSV(), name = 'cohortSummaryXtract')
+cohortSummaryXtract.inputs.in_csv_c = os.path.join(res_dir, 'tractseg_xtract_cohort_summary.csv')
+
 
 # ---------------------- CREATE WORKFLOW AND CONNECT NODES ----------------------
 print(colours.CGREEN + 'Connecting Nodes.\n' + colours.CEND)
@@ -136,35 +183,82 @@ workflow.connect([
     (infosource, createSubjectScanContainer, [('subject_scan', 'subject_scan')]),
     (createSubjectScanContainer, datasink, [('container', 'container')]),
 
+# ---------------------- DTI
+    # convert to mif
+    (datasource, nii2mif, [('dwi_eddy_file', 'in_file'),
+                           ('bvec_file', 'in_bvec'),
+                           ('bval_file', 'in_bval')]),
+    
+    # exclude b2500 shell
+    (nii2mif, dwiextract2, [('out_file', 'in_file')]),
+
+    # perform dti
+    (dwiextract2, dwi2tensor, [('out_file', 'in_file')]),
+
+    # calculate metrics
+    (dwi2tensor, tensor2metrics, [('tensor', 'in_file')]),
+
 # ---------------------- WM PARCELLATION WITH TRACTSEG
     (datasource, tractSeg, [('dwi_eddy_file', 'in_file'),
                             ('bval_file', 'in_bvals'), 
                             ('bvec_file', 'in_bvecs'),
                             ('dwi_mask_file', 'in_mask')]),
-    # (datasource, tractSegXtract, [('dwi_eddy_file', 'in_file'),
-    #                               ('bval_file', 'in_bvals'), 
-    #                               ('bvec_file', 'in_bvecs'),
-    #                               ('dwi_mask_file', 'in_mask')]),
+    (datasource, tractSegXtract, [('dwi_eddy_file', 'in_file'),
+                                  ('bval_file', 'in_bvals'), 
+                                  ('bvec_file', 'in_bvecs'),
+                                  ('dwi_mask_file', 'in_mask')]),
 
-# ---------------------- DKI FITTING
-    # (datasource, dkifit, [('dwi_eddy_file', 'in_file'),
-    #                         ('bval_file', 'in_bvals'), 
-    #                         ('bvec_file', 'in_bvecs'),
-    #                         ('dwi_mask_file', 'in_mask')]),
+# ---------------------- DTI METRICS IN WM TRACTS
+    # DTI metrics in WM tracts
+    (infosource, tractMetrics, [('subject_scan', 'subject_scan')]),
+    (tractSeg, tractMetrics, [('out_binary_atlas', 'in_binary_atlas'),
+                              ('out_labels', 'tract_labels')]),
+    (tensor2metrics, tractMetrics, [('out_adc', 'in_md'),
+                                    ('out_fa', 'in_fa'), 
+                                    ('out_ad', 'in_ad'),
+                                    ('out_rd', 'in_rd')]),
+    
+    # DTI metrics in WM tracts (xtract)
+    (infosource, tractMetricsXtract, [('subject_scan', 'subject_scan')]),
+    (tractSegXtract, tractMetricsXtract, [('out_binary_atlas', 'in_binary_atlas'),
+                                          ('out_labels', 'tract_labels')]),
+    (tensor2metrics, tractMetricsXtract, [('out_adc', 'in_md'),
+                                          ('out_fa', 'in_fa'), 
+                                          ('out_ad', 'in_ad'),
+                                          ('out_rd', 'in_rd')]),
 
-# ---------------------- DKI METRICS IN WM TRACTS
-    # (infosource, tractMetrics, [('subject_id',  'subject_id')]),
-    # (tractSeg, tractMetrics, [('out_binary_atlas', 'in_binary_atlas')]),
-    # (dkifit, tractMetrics, [('out_fa', 'in_fa'), ('out_md', 'in_md'),('out_mk', 'in_mk'), ('out_ak', 'in_ak'),('out_rk', 'in_rk'),('out_rd', 'in_rd'),('out_ad', 'in_ad')]),
+# ---------------------- QUALITY CONTROL
+    # mask check
+    (datasource, QC_mask, [('dwi_mask_file', 'in_mask')]),
 
-    # (infosource, tractMetricsXtract, [('subject_id',  'subject_id')]),
-    # (tractSegXtract, tractMetricsXtract, [('out_binary_atlas', 'in_binary_atlas')]),
-    # (dkifit, tractMetricsXtract, [('out_fa', 'in_fa'), ('out_md', 'in_md'),('out_mk', 'in_mk'), ('out_ak', 'in_ak'),('out_rk', 'in_rk'),('out_rd', 'in_rd'),('out_ad', 'in_ad')]),
+    # WM volume check
+    (tractSeg, QC_wm_vol, [('out_binary_atlas', 'in_file')]),
+
+    # MD check
+    (tensor2metrics, QC_MD, [('out_adc', 'in_md')]),
+    
+# ---------------------- SUMMARY
+    # summary for standard tracts
+    (QC_mask, sessionSummary, [('out_maskvolume', 'in_maskvolume')]),
+    (QC_wm_vol, sessionSummary, [('out_wmvolume', 'in_wmvolume')]),
+    (QC_MD, sessionSummary, [('out_perc', 'in_mdperc')]),
+    (tractMetrics, sessionSummary, [('out_csv_summary', 'in_csv')]),
+
+    # summary for xtract tracts
+    (QC_mask, sessionSummaryXtract, [('out_maskvolume', 'in_maskvolume')]),
+    (QC_wm_vol, sessionSummaryXtract, [('out_wmvolume', 'in_wmvolume')]),
+    (QC_MD, sessionSummaryXtract, [('out_perc', 'in_mdperc')]),
+    (tractMetricsXtract, sessionSummaryXtract, [('out_csv_summary', 'in_csv')]),
 
 # ---------------------- DATASINK
-    # (dkifit, datasink, [('out_fa', 'tractseg.dki.@fa'), ('out_md', 'tractseg.dki.@md'),('out_mk', 'tractseg.dki.@mk'), ('out_ak', 'tractseg.dki.@ak'),
-    # ('out_rk', 'tractseg.dki.@rk'),('out_rd', 'tractseg.dki.@rd'),('out_ad', 'tractseg.dki.@ad')]), 
-    # (dkifit, QC_MD, [('out_md', 'in_md')]),
+
+    (sessionSummary, datasink, [('out_csv_summary', '@tractseg')]),
+    (sessionSummaryXtract, datasink, [('out_csv_summary', '@tractseg_xtract')]),
+
+    # add session summary to cohort summary
+    (sessionSummary, cohortSummary, [('out_csv_summary', 'in_csv_p')]),
+    (sessionSummaryXtract, cohortSummaryXtract, [('out_csv_summary', 'in_csv_p')]),
+
 ])
 
 # Run the script and generate a graph of the workflow

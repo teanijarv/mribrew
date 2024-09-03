@@ -25,7 +25,8 @@ dwi_name = 'dir-AP_dwi'
 dwipa_name = 'dir-PA_dwi'
 
 # List of all subjects
-subject_list = next(os.walk(raw_dir))[1]
+# subject_list = next(os.walk(raw_dir))[1]
+subject_list = ['BOF112_BioFINDER2_216']
 
 # Generate a list of all (subject, scan) tuples
 subject_scan_list = []
@@ -51,8 +52,8 @@ subject_scan_list = filtered_subject_scan_list
 # Computational variables
 processing_type = 'MultiProc' # or 'Linear'
 cuda_processing = False
-total_memory = 24 # in GB
-n_cpus = 24 # number of nipype processes to run at the same time
+total_memory = 1 # in GB
+n_cpus = 1 # number of nipype processes to run at the same time
 os.environ['OMP_NUM_THREADS'] = str(n_cpus)
 os.environ["NUMEXPR_NUM_THREADS"] = str(n_cpus)
 os.environ["OPENBLAS_NUM_THREADS"] = "1"

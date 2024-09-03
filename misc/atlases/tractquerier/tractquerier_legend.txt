@@ -1,0 +1,72 @@
+tq_AF_lh: Arcuate Fasciculus left hemisphere
+tq_AF_rh: Arcuate Fasciculus right hemisphere
+tq_ATR_lh: Anterior Thalamic Radiation left hemisphere
+tq_ATR_rh: Anterior Thalamic Radiation right hemisphere
+tq_CA: Commissure Anterior
+tq_CC_1: Rostrum
+tq_CC_2: Genu
+tq_CC_3: Rostral body (Premotor)
+tq_CC_4: Anterior midbody (Primary Motor)
+tq_CC_5: Posterior midbody (Primary Somatosensory)
+tq_CC_6: Isthmus
+tq_CC_7: Splenium
+tq_CG_lh: Cingulum left hemisphere
+tq_CG_rh: Cingulum right hemisphere
+tq_CST_lh: Corticospinal Tract left hemisphere
+tq_CST_rh: Corticospinal Tract right hemisphere
+tq_MLF_lh: Middle longitudinal fascicle left hemisphere
+tq_MLF_rh: Middle longitudinal fascicle right hemisphere
+tq_FPT_lh: Fronto-pontine tract left hemisphere
+tq_FPT_rh: Fronto-pontine tract right hemisphere
+tq_FX_lh: Fornix left hemisphere
+tq_FX_rh: Fornix right hemisphere
+tq_ICP_lh: Inferior cerebellar peduncle left hemisphere
+tq_ICP_rh: Inferior cerebellar peduncle right hemisphere
+tq_IFO_lh: Inferior occipito-frontal fascicle left hemisphere
+tq_IFO_rh: Inferior occipito-frontal fascicle right hemisphere
+tq_ILF_lh: Inferior longitudinal fascicle left hemisphere
+tq_ILF_rh: Inferior longitudinal fascicle right hemisphere
+tq_MCP: Middle cerebellar peduncle
+tq_OR_lh: Optic radiation left hemisphere
+tq_OR_rh: Optic radiation right hemisphere
+tq_POPT_lh: Parieto-occipital pontine left hemisphere
+tq_POPT_rh: Parieto-occipital pontine right hemisphere
+tq_SCP_lh: Superior cerebellar peduncle left hemisphere
+tq_SCP_rh: Superior cerebellar peduncle right hemisphere
+tq_SLF_I_lh: Superior longitudinal fascicle I left hemisphere
+tq_SLF_I_rh: Superior longitudinal fascicle I right hemisphere
+tq_SLF_II_lh: Superior longitudinal fascicle II left hemisphere
+tq_SLF_II_rh: Superior longitudinal fascicle II right hemisphere
+tq_SLF_III_lh: Superior longitudinal fascicle III left hemisphere
+tq_SLF_III_rh: Superior longitudinal fascicle III right hemisphere
+tq_STR_lh: Superior Thalamic Radiation left hemisphere
+tq_STR_rh: Superior Thalamic Radiation right hemisphere
+tq_UF_lh: Uncinate fascicle left hemisphere
+tq_UF_rh: Uncinate fascicle right hemisphere
+tq_CC: Corpus Callosum - all
+tq_T_PREF_lh: Thalamo-prefrontal left hemisphere
+tq_T_PREF_rh: Thalamo-prefrontal right hemisphere
+tq_T_PREM_lh: Thalamo-premotor left hemisphere
+tq_T_PREM_rh: Thalamo-premotor right hemisphere
+tq_T_PREC_lh: Thalamo-precentral left hemisphere
+tq_T_PREC_rh: Thalamo-precentral right hemisphere
+tq_T_POSTC_lh: Thalamo-postcentral left hemisphere
+tq_T_POSTC_rh: Thalamo-postcentral right hemisphere
+tq_T_PAR_lh: Thalamo-parietal left hemisphere
+tq_T_PAR_rh: Thalamo-parietal right hemisphere
+tq_T_OCC_lh: Thalamo-occipital left hemisphere
+tq_T_OCC_rh: Thalamo-occipital right hemisphere
+tq_ST_FO_lh: Striato-fronto-orbital left hemisphere
+tq_ST_FO_rh: Striato-fronto-orbital right hemisphere
+tq_ST_PREF_lh: Striato-prefrontal left hemisphere
+tq_ST_PREF_rh: Striato-prefrontal right hemisphere
+tq_ST_PREM_lh: Striato-premotor left hemisphere
+tq_ST_PREM_rh: Striato-premotor right hemisphere
+tq_ST_PREC_lh: Striato-precentral left hemisphere
+tq_ST_PREC_rh: Striato-precentral right hemisphere
+tq_ST_POSTC_lh: Striato-postcentral left hemisphere
+tq_ST_POSTC_rh: Striato-postcentral right hemisphere
+tq_ST_PAR_lh: Striato-parietal left hemisphere
+tq_ST_PAR_rh: Striato-parietal right hemisphere
+tq_ST_OCC_lh: Striato-occipital left hemisphere
+tq_ST_OCC_rh: Striato-occipital right hemisphere

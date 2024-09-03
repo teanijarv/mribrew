@@ -1,0 +1,42 @@
+xt_ac: Anterior Commissure
+xt_af_lh: Arcuate Fasciculus left hemisphere
+xt_af_rh: Arcuate Fasciculus right hemisphere
+xt_ar_lh: Acoustic Radiation left hemisphere
+xt_ar_rh: Acoustic Radiation right hemisphere
+xt_atr_lh: Anterior Thalamic Radiation left hemisphere
+xt_atr_rh: Anterior Thalamic Radiation right hemisphere
+xt_cbd_lh: Cingulum subsection: Dorsal left hemisphere
+xt_cbd_rh: Cingulum subsection: Dorsal right hemisphere
+xt_cbp_lh: Cingulum subsection: Peri-genual left hemisphere
+xt_cbp_rh: Cingulum subsection: Peri-genual right hemisphere
+xt_cbt_lh: Cingulum subsection: Temporal left hemisphere
+xt_cbt_rh: Cingulum subsection: Temporal right hemisphere
+xt_cst_lh: Corticospinal Tract left hemisphere
+xt_cst_rh: Corticospinal Tract right hemisphere
+xt_fa_lh: Frontal Aslant left hemisphere
+xt_fa_rh: Frontal Aslant right hemisphere
+xt_fma: Forceps Major
+xt_fmi: Forceps Minor
+xt_fx_lh: Fornix left hemisphere
+xt_fx_rh: Fornix right hemisphere
+xt_ifo_lh: Inferior Fronto-Occipital Fasciculus left hemisphere
+xt_ifo_rh: Inferior Fronto-Occipital Fasciculus right hemisphere
+xt_ilf_lh: Inferior Longitudinal Fasciculus left hemisphere
+xt_ilf_rh: Inferior Longitudinal Fasciculus right hemisphere
+xt_mcp: Middle Cerebellar Peduncle
+xt_mdlf_lh: Middle Longitudinal Fasciculus left hemisphere
+xt_mdlf_rh: Middle Longitudinal Fasciculus right hemisphere
+xt_or_lh: Optic Radiation left hemisphere
+xt_or_rh: Optic Radiation right hemisphere
+xt_slf1_lh: Superior Longitudinal Fasciculus 1 left hemisphere
+xt_slf1_rh: Superior Longitudinal Fasciculus 1 right hemisphere
+xt_slf2_lh: Superior Longitudinal Fasciculus 2 left hemisphere
+xt_slf2_rh: Superior Longitudinal Fasciculus 2 right hemisphere
+xt_slf3_lh: Superior Longitudinal Fasciculus 3 left hemisphere
+xt_slf3_rh: Superior Longitudinal Fasciculus 3 right hemisphere
+xt_str_lh: Superior Thalamic Radiation left hemisphere
+xt_str_rh: Superior Thalamic Radiation right hemisphere
+xt_uf_lh: Uncinate Fasciculus left hemisphere
+xt_uf_rh: Uncinate Fasciculus right hemisphere
+xt_vof_lh: Vertical Occipital Fasciculus left hemisphere
+xt_vof_rh: Vertical Occipital Fasciculus right hemisphere

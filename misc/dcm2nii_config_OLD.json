@@ -1,0 +1,32 @@
+{
+    "descriptions": [
+        {
+            "datatype": "anat",
+            "suffix": "T1w",
+            "criteria": {
+                "SeriesDescription": "*t1_mprage*"
+            },
+            "sidecar_changes": {
+                "ProtocolName": "T1"
+            }
+        },
+        {
+            "datatype": "dwi",
+            "suffix": "dwi",
+            "custom_entities": "dir-AP",
+            "criteria": {
+                "SeriesDescription": "ep2d_diff_hardi_s2",
+                "PhaseEncodingDirection": "j-"
+            }
+        },
+        {
+            "datatype": "dwi",
+            "suffix": "dwi",
+            "custom_entities": "dir-PA",
+            "criteria": {
+               "SeriesDescription": "ep2d_diff_hardi_s2_pa",
+               "PhaseEncodingDirection": "j"
+            }
+        }
+    ]
+}
